@@ -72,18 +72,22 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - Mobile Accessories</title>
+    <title>Login - Bazario Mobile Accessories</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="BAZARIO_STYLES.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body class="login-page">
-    <div class="login-container">
-        <div class="login-header">
-            <i class="fas fa-mobile-alt login-icon"></i>
-            <h2>Mobile Accessories</h2>
-            <p>Login to your account</p>
-        </div>
+    <div class="login-wrapper">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="logo-circle">
+                    <i class="fas fa-shopping-bag login-icon"></i>
+                </div>
+                <h2 class="brand-title">BAZARIO</h2>
+                <p class="brand-subtitle">Mobile Accessories Management System</p>
+                <div class="header-divider"></div>
+            </div>
         
         <?php if (!empty($err)): ?>
             <div class="alert alert-danger alert-dismissible fade show">
@@ -92,103 +96,91 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             </div>
         <?php endif; ?>
         
-        <!-- Login Type Tabs -->
-        <ul class="nav-tabs">
-            <li>
-                <a href="#" class="nav-link <?php echo ($login_type === 'user') ? 'active' : ''; ?>" onclick="switchTab('user'); return false;">
-                    <i class="fas fa-user"></i> User Login
-                </a>
-            </li>
-            <li>
-                <a href="#" class="nav-link <?php echo ($login_type === 'admin') ? 'active' : ''; ?>" onclick="switchTab('admin'); return false;">
-                    <i class="fas fa-user-shield"></i> Admin Login
-                </a>
-            </li>
-        </ul>
-        
-        <!-- User Login Tab -->
-        <div class="tab-content <?php echo ($login_type === 'user') ? 'active' : ''; ?>" id="user-tab">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span class="login-badge user-badge"><i class="fas fa-user"></i> User Account</span>
+        <!-- Toggle Buttons -->
+        <div class="box-toggle-row" style="display:flex; gap:12px; justify-content:center; margin-bottom:18px;">
+            <button id="user-toggle" class="btn btn-outline-primary box-toggle active" onclick="switchBox('user');">User Account</button>
+            <button id="admin-toggle" class="btn btn-outline-danger box-toggle" onclick="switchBox('admin');">Admin Account</button>
+        </div>
+
+        <!-- User Box -->
+        <div class="account-box user-box" id="user-box" style="display: block;">
+            <div class="box-header text-center">
+                <div class="box-logo user-logo"><i class="fas fa-user"></i></div>
+                <h4>Sign in to your User Account</h4>
+                <p class="box-sub">Access your orders, profile and more.</p>
             </div>
-            <form action="" method="post">
+            <form action="" method="post" class="login-form">
                 <input type="hidden" name="login_type" value="user">
-                
                 <div class="form-group">
                     <label for="username-user">Username</label>
-                    <input type="text" class="form-control" name="username" id="username-user" 
-                           placeholder="Enter your username" required>
+                    <input type="text" class="form-control" name="username" id="username-user" placeholder="Enter your username" required>
                 </div>
-                
                 <div class="form-group">
                     <label for="password-user">Password</label>
-                    <input type="password" class="form-control" name="password" id="password-user" 
-                           placeholder="Enter your password" required>
+                    <input type="password" class="form-control" name="password" id="password-user" placeholder="Enter your password" required>
                 </div>
-                
-                <button type="submit" class="btn btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Login as User
-                </button>
-                
-                
+                <button type="submit" class="btn btn-login btn-block btn-primary">Login as User</button>
             </form>
-            
-            <div class="register-link">
-                Don't have an account? <a href="register.php">Register here</a>
-            </div>
         </div>
-        
-        <!-- Admin Login Tab -->
-        <div class="tab-content <?php echo ($login_type === 'admin') ? 'active' : ''; ?>" id="admin-tab">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span class="login-badge admin-badge"><i class="fas fa-user-shield"></i> Admin Account</span>
+
+        <!-- Admin Box -->
+        <div class="account-box admin-box" id="admin-box" style="display: none;">
+            <div class="box-header text-center">
+                <div class="box-logo admin-logo"><i class="fas fa-user-shield"></i></div>
+                <h4>Admin Dashboard Login</h4>
+                <p class="box-sub">Enter admin credentials to manage the store.</p>
             </div>
-            <form action="" method="post">
+            <form action="" method="post" class="login-form">
                 <input type="hidden" name="login_type" value="admin">
-                
                 <div class="form-group">
                     <label for="username-admin">Username</label>
-                    <input type="text" class="form-control" name="username" id="username-admin" 
-                           placeholder="Enter admin username" required>
+                    <input type="text" class="form-control" name="username" id="username-admin" placeholder="Enter admin username" required>
                 </div>
-                
                 <div class="form-group">
                     <label for="password-admin">Password</label>
-                    <input type="password" class="form-control" name="password" id="password-admin" 
-                           placeholder="Enter admin password" required>
+                    <input type="password" class="form-control" name="password" id="password-admin" placeholder="Enter admin password" required>
                 </div>
-                
-                <button type="submit" class="btn btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Login as Admin
-                </button>
-                
-                
+                <button type="submit" class="btn btn-login btn-block btn-danger">Login as Admin</button>
             </form>
         </div>
+    </div>
     </div>
     
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        function switchTab(type) {
-            // Hide all tabs
-            document.getElementById('user-tab').classList.remove('active');
-            document.getElementById('admin-tab').classList.remove('active');
-            
-            // Remove active class from all nav-links
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
-            
-            // Show selected tab
+        // Initialize boxes on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBoxes();
+        });
+
+        function initializeBoxes() {
+            // Default: show user box
+            document.getElementById('user-box').style.display = 'block';
+            document.getElementById('admin-box').style.display = 'none';
+            document.getElementById('user-toggle').classList.add('active');
+            document.getElementById('admin-toggle').classList.remove('active');
+        }
+
+        function switchBox(type) {
+            // Hide both
+            document.getElementById('user-box').style.display = 'none';
+            document.getElementById('admin-box').style.display = 'none';
+            // Remove active from toggles
+            document.getElementById('user-toggle').classList.remove('active');
+            document.getElementById('admin-toggle').classList.remove('active');
+
             if (type === 'user') {
-                document.getElementById('user-tab').classList.add('active');
-                document.querySelectorAll('.nav-link')[0].classList.add('active');
+                document.getElementById('user-box').style.display = 'block';
+                document.getElementById('user-toggle').classList.add('active');
+                document.getElementById('username-user').focus();
             } else {
-                document.getElementById('admin-tab').classList.add('active');
-                document.querySelectorAll('.nav-link')[1].classList.add('active');
+                document.getElementById('admin-box').style.display = 'block';
+                document.getElementById('admin-toggle').classList.add('active');
+                document.getElementById('username-admin').focus();
             }
         }
     </script>
+</body>
 <?php mysqli_close($conn); ?>
 </html>
