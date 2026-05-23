@@ -298,7 +298,7 @@ if (!$preferences) {
         </div>
         <div style="display: flex; gap: 20px; align-items: center;">
             <a href="user_dashboard.php" style="color: white; text-decoration: none; font-size: 14px;"><i class="fas fa-home"></i> Shop</a>
-            <a href="orders.php" style="color: white; text-decoration: none; font-size: 14px;"><i class="fas fa-shopping-bag"></i> Orders</a>
+            <a href="orders_new.php" style="color: white; text-decoration: none; font-size: 14px;"><i class="fas fa-shopping-bag"></i> My Orders</a>
             <a href="profile.php" style="color: white; text-decoration: none; font-size: 14px;"><i class="fas fa-user"></i> Profile</a>
             <form action="logout.php" method="POST" style="margin: 0; display: inline;">
                 <button type="submit" style="background: none; border: none; color: white; cursor: pointer; font-size: 14px;"><i class="fas fa-sign-out-alt"></i> Logout</button>

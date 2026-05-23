@@ -6,6 +6,11 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     exit;
 }
 
+// Unified "My Orders" interface - redirect to orders_new.php
+// This ensures all user-facing order links point to a single unified interface
+header("Location: orders_new.php");
+exit;
+
 require_once "config.php";
 require_once "notification_service.php";
 

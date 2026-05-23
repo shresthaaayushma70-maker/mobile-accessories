@@ -398,7 +398,7 @@ mysqli_close($conn);
                 <a href="user_dashboard.php">
                     <i class="fas fa-home"></i> Home
                 </a>
-                <a href="orders.php">
+                <a href="orders_new.php">
                     <i class="fas fa-shopping-bag"></i> My Orders
                 </a>
                 <a href="profile.php">

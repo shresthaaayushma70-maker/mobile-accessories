@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 mysqli_stmt_execute($history_stmt);
                 
                 $success_msg = "Order placed successfully! Order #" . $order_number;
-                header("refresh:2;url=orders.php");
+                header("refresh:2;url=orders_new.php");
             } else {
                 $error_msg = "Error placing order: " . mysqli_error($conn);
             }
