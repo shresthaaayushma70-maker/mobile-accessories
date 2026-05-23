@@ -71,115 +71,177 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Login - Bazario Mobile Accessories</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="BAZARIO_STYLES.css?v=2">
+    <link rel="stylesheet" href="BAZARIO_STYLES.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body class="login-page">
+    <div class="login-background"></div>
+    
     <div class="login-wrapper">
         <div class="login-container">
+            <!-- Header Section with Logo and App Name -->
             <div class="login-header">
-                <div class="logo-circle">
-                    <i class="fas fa-shopping-bag login-icon"></i>
+                <div class="logo-container">
+                    <div class="logo-circle">
+                        <i class="fas fa-shopping-bag login-icon"></i>
+                    </div>
                 </div>
-                <h2 class="brand-title">BAZARIO</h2>
+                <h1 class="brand-title">BAZARIO</h1>
                 <p class="brand-subtitle">Mobile Accessories Management System</p>
                 <div class="header-divider"></div>
             </div>
         
-        <?php if (!empty($err)): ?>
-            <div class="alert alert-danger alert-dismissible fade show">
-                <strong>Error!</strong> <?php echo $err; ?>
-                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <!-- Error Message -->
+            <?php if (!empty($err)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <div class="alert-content">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>Error!</strong> <?php echo $err; ?>
+                    </div>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            <?php endif; ?>
+            
+            <!-- Toggle Buttons for Account Type -->
+            <div class="login-toggle-section">
+                <button id="user-toggle" class="btn btn-toggle-account active" onclick="switchBox('user');">
+                    <i class="fas fa-user"></i>
+                    <span class="toggle-text">User Account</span>
+                </button>
+                <button id="admin-toggle" class="btn btn-toggle-account" onclick="switchBox('admin');">
+                    <i class="fas fa-user-shield"></i>
+                    <span class="toggle-text">Admin Account</span>
+                </button>
             </div>
-        <?php endif; ?>
-        
-        <!-- Toggle Buttons -->
-        <div class="box-toggle-row" style="display:flex; gap:12px; justify-content:center; margin-bottom:18px;">
-            <button id="user-toggle" class="btn btn-outline-primary box-toggle active" onclick="switchBox('user');">User Account</button>
-            <button id="admin-toggle" class="btn btn-outline-danger box-toggle" onclick="switchBox('admin');">Admin Account</button>
-        </div>
 
-        <!-- User Box -->
-        <div class="account-box user-box" id="user-box" style="display: block;">
-            <div class="box-header text-center">
-                <div class="box-logo user-logo"><i class="fas fa-user"></i></div>
-                <h4>Sign in to your User Account</h4>
-                <p class="box-sub">Access your orders, profile and more.</p>
-            </div>
-            <form action="" method="post" class="login-form">
-                <input type="hidden" name="login_type" value="user">
-                <div class="form-group">
-                    <label for="username-user">Username</label>
-                    <input type="text" class="form-control" name="username" id="username-user" placeholder="Enter your username" required>
+            <!-- User Login Box -->
+            <div class="account-box user-box active-box" id="user-box">
+                <div class="box-header">
+                    <div class="box-logo user-logo">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3 class="box-title">User Login</h3>
+                    <p class="box-description">Sign in to your account to access orders, profile and more</p>
                 </div>
-                <div class="form-group">
-                    <label for="password-user">Password</label>
-                    <input type="password" class="form-control" name="password" id="password-user" placeholder="Enter your password" required>
-                </div>
-                <button type="submit" class="btn btn-login btn-block btn-primary">Login as User</button>
-            </form>
-        </div>
+                <form action="" method="post" class="login-form">
+                    <input type="hidden" name="login_type" value="user">
+                    
+                    <div class="form-group">
+                        <label for="username-user" class="form-label">
+                            <i class="fas fa-user-circle"></i> Username
+                        </label>
+                        <input type="text" class="form-control form-control-lg" name="username" id="username-user" 
+                               placeholder="Enter your username" required>
+                    </div>
 
-        <!-- Admin Box -->
-        <div class="account-box admin-box" id="admin-box" style="display: none;">
-            <div class="box-header text-center">
-                <div class="box-logo admin-logo"><i class="fas fa-user-shield"></i></div>
-                <h4>Admin Dashboard Login</h4>
-                <p class="box-sub">Enter admin credentials to manage the store.</p>
+                    <div class="form-group">
+                        <label for="password-user" class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" class="form-control form-control-lg" name="password" id="password-user" 
+                               placeholder="Enter your password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-login-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> Login as User
+                    </button>
+                </form>
+                
+                <div class="form-footer">
+                    <p>Don't have an account? <a href="register.php" class="register-link">Register here</a></p>
+                </div>
             </div>
-            <form action="" method="post" class="login-form">
-                <input type="hidden" name="login_type" value="admin">
-                <div class="form-group">
-                    <label for="username-admin">Username</label>
-                    <input type="text" class="form-control" name="username" id="username-admin" placeholder="Enter admin username" required>
+
+            <!-- Admin Login Box -->
+            <div class="account-box admin-box" id="admin-box">
+                <div class="box-header">
+                    <div class="box-logo admin-logo">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <h3 class="box-title">Admin Login</h3>
+                    <p class="box-description">Enter admin credentials to manage the store</p>
                 </div>
-                <div class="form-group">
-                    <label for="password-admin">Password</label>
-                    <input type="password" class="form-control" name="password" id="password-admin" placeholder="Enter admin password" required>
-                </div>
-                <button type="submit" class="btn btn-login btn-block btn-danger">Login as Admin</button>
-            </form>
+                <form action="" method="post" class="login-form">
+                    <input type="hidden" name="login_type" value="admin">
+                    
+                    <div class="form-group">
+                        <label for="username-admin" class="form-label">
+                            <i class="fas fa-user-circle"></i> Username
+                        </label>
+                        <input type="text" class="form-control form-control-lg" name="username" id="username-admin" 
+                               placeholder="Enter admin username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password-admin" class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" class="form-control form-control-lg" name="password" id="password-admin" 
+                               placeholder="Enter admin password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-login-admin btn-block">
+                        <i class="fas fa-sign-in-alt"></i> Login as Admin
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
-    </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // Initialize boxes on page load
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            initializeBoxes();
+            initializeLogin();
         });
 
-        function initializeBoxes() {
+        function initializeLogin() {
             // Default: show user box
-            document.getElementById('user-box').style.display = 'block';
-            document.getElementById('admin-box').style.display = 'none';
-            document.getElementById('user-toggle').classList.add('active');
-            document.getElementById('admin-toggle').classList.remove('active');
+            showBox('user');
         }
 
         function switchBox(type) {
-            // Hide both
-            document.getElementById('user-box').style.display = 'none';
-            document.getElementById('admin-box').style.display = 'none';
-            // Remove active from toggles
-            document.getElementById('user-toggle').classList.remove('active');
-            document.getElementById('admin-toggle').classList.remove('active');
+            showBox(type);
+        }
+
+        function showBox(type) {
+            const userBox = document.getElementById('user-box');
+            const adminBox = document.getElementById('admin-box');
+            const userToggle = document.getElementById('user-toggle');
+            const adminToggle = document.getElementById('admin-toggle');
+
+            // Hide both boxes and remove active class
+            userBox.classList.remove('active-box');
+            adminBox.classList.remove('active-box');
+            userToggle.classList.remove('active');
+            adminToggle.classList.remove('active');
 
             if (type === 'user') {
-                document.getElementById('user-box').style.display = 'block';
-                document.getElementById('user-toggle').classList.add('active');
+                userBox.classList.add('active-box');
+                userToggle.classList.add('active');
                 document.getElementById('username-user').focus();
             } else {
-                document.getElementById('admin-box').style.display = 'block';
-                document.getElementById('admin-toggle').classList.add('active');
+                adminBox.classList.add('active-box');
+                adminToggle.classList.add('active');
                 document.getElementById('username-admin').focus();
             }
         }
+
+        // Add smooth focus effects
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.closest('.form-group').classList.add('focused');
+            });
+            input.addEventListener('blur', function() {
+                this.closest('.form-group').classList.remove('focused');
+            });
+        });
     </script>
 </body>
 <?php mysqli_close($conn); ?>

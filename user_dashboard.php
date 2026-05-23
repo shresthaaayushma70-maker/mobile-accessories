@@ -424,10 +424,10 @@ while ($row = $result->fetch_assoc()) {
             <a href="user_dashboard.php">
                 <i class="fas fa-home"></i> Home
             </a>
-            <a href="orders.php">
+            <a href="orders_new.php">
                 <i class="fas fa-shopping-bag"></i> My Orders
             </a>
-            <a href="profile.php">
+            <a href="profile_enhanced.php">
                 <i class="fas fa-user-circle"></i> Profile
             </a>
             <form action="logout.php" method="POST" style="margin: 0; padding: 0;">

@@ -306,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <i class="fas fa-plus-circle"></i> Add Product
             </a>
             <a href="orders.php">
-                <i class="fas fa-list"></i> View Orders
+                <i class="fas fa-shopping-bag"></i> My Orders
             </a>
             <a href="profile.php">
                 <i class="fas fa-user"></i> Profile

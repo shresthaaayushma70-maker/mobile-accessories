@@ -98,7 +98,7 @@ $orders_result = mysqli_stmt_get_result($stmt);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo $is_admin ? 'All Orders' : 'My Orders'; ?> - Bazario</title>
+    <title>My Orders - Bazario</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="BAZARIO_STYLES.css">
@@ -627,7 +627,7 @@ $orders_result = mysqli_stmt_get_result($stmt);
     <div class="container-main">
         <h1 class="page-title">
             <i class="fas fa-shopping-bag"></i>
-            <?php echo $is_admin ? 'All Customer Orders' : 'My Orders'; ?>
+            My Orders
         </h1>
         
         <?php if (!empty($success_msg)): ?>
