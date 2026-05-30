@@ -414,8 +414,8 @@ $all_statuses = ['Order Placed', 'Confirmed', 'Processing', 'Packing', 'Out for 
                             <tr data-order-id="<?php echo $order['id']; ?>">
                                 <td class="order-id">#<?php echo htmlspecialchars($order['order_number']); ?></td>
                                 <td>
-                                    <div style="font-weight: 600; color: #333;"><?php echo htmlspecialchars($order['customer_name']); ?></div>
-                                    <small style="color: #999;"><?php echo htmlspecialchars($order['customer_phone']); ?></small>
+                                    <div style="font-weight: 600; color: #333;"><?php echo htmlspecialchars($order['customer_name'] ?? 'Not provided'); ?></div>
+                                    <small style="color: #999;"><?php echo htmlspecialchars($order['customer_phone'] ?? 'Not provided'); ?></small>
                                 </td>
                                 <td>
                                     <strong>₹<?php echo number_format($order['total_amount'], 2); ?></strong>

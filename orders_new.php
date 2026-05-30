@@ -499,11 +499,11 @@ $total_orders = array_sum($status_counts);
                                 </div>
                                 <div class="order-details-row">
                                     <span class="order-details-label">Address:</span>
-                                    <span class="order-details-value"><?php echo substr($order['address_line1'], 0, 30) . '...'; ?></span>
+                                    <span class="order-details-value"><?php echo substr($order['address_line1'] ?? 'Address not provided', 0, 30) . '...'; ?></span>
                                 </div>
                                 <div class="order-details-row">
                                     <span class="order-details-label">City:</span>
-                                    <span class="order-details-value"><?php echo $order['city']; ?></span>
+                                    <span class="order-details-value"><?php echo htmlspecialchars($order['city'] ?? 'Not specified'); ?></span>
                                 </div>
                                 <?php if ($is_admin && isset($order['username'])): ?>
                                     <div class="order-details-row">

@@ -460,7 +460,7 @@ $current_style = $status_colors[$order['status']] ?? ['color' => '#666', 'icon' 
                             <div style="margin-bottom: 0;">
                                 <label style="color: #666; margin-bottom: 5px;">Contact Number</label>
                                 <p style="margin: 0; font-weight: 600; color: #001a33;">
-                                    <?php echo htmlspecialchars($order['customer_phone']); ?>
+                                    <?php echo htmlspecialchars($order['customer_phone'] ?? 'Not provided'); ?>
                                 </p>
                             </div>
                         </div>

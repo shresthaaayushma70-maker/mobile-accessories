@@ -675,20 +675,20 @@ $orders_result = mysqli_stmt_get_result($stmt);
                         <div class="order-info">
                             <div class="info-item">
                                 <div class="info-label">Customer Name</div>
-                                <div class="info-value"><?php echo htmlspecialchars($order['customer_name']); ?></div>
+                                <div class="info-value"><?php echo htmlspecialchars($order['customer_name'] ?? 'Not provided'); ?></div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">Email</div>
-                                <div class="info-value"><?php echo htmlspecialchars($order['customer_email']); ?></div>
+                                <div class="info-value"><?php echo htmlspecialchars($order['customer_email'] ?? 'Not provided'); ?></div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">Phone</div>
-                                <div class="info-value"><?php echo htmlspecialchars($order['customer_phone']); ?></div>
+                                <div class="info-value"><?php echo htmlspecialchars($order['customer_phone'] ?? 'Not provided'); ?></div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">Payment Method</div>
                                 <div class="info-value">
-                                    <?php if ($order['payment_method'] == 'COD'): ?>
+                                    <?php if (($order['payment_method'] ?? 'COD') == 'COD'): ?>
                                         <span class="payment-badge payment-cod"><i class="fas fa-money-bill"></i> Cash on Delivery</span>
                                     <?php else: ?>
                                         <span class="payment-badge payment-online"><i class="fas fa-credit-card"></i> Online Payment</span>
@@ -701,28 +701,24 @@ $orders_result = mysqli_stmt_get_result($stmt);
                             <div style="font-weight: 700; color: #333; margin-bottom: 15px; font-size: 14px;">📍 Delivery Address</div>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                                 <div>
-                                    <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">House Number / Apartment</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['house_number']); ?></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">Street</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['street']); ?></div>
+                                    <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">Address</div>
+                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['address_line1'] ?? $order['street'] ?? 'Not provided'); ?></div>
                                 </div>
                                 <div>
                                     <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">City</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['city']); ?></div>
+                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['city'] ?? 'Not specified'); ?></div>
                                 </div>
                                 <div>
                                     <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">State</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['state']); ?></div>
+                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['state'] ?? 'Not specified'); ?></div>
                                 </div>
                                 <div>
                                     <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">Postal Code</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['postal_code']); ?></div>
+                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['postal_code'] ?? 'Not provided'); ?></div>
                                 </div>
                                 <div>
                                     <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">Country</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['country']); ?></div>
+                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['country'] ?? 'Not specified'); ?></div>
                                 </div>
                             </div>
                         </div>
