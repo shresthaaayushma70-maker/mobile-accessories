@@ -7,6 +7,32 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     exit;
 }
 
+// Prevent admin from accessing customer shop
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+    die("
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Access Denied</title>
+        <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'>
+        <style>
+            body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f8f9fa; }
+            .error-container { text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .error-container h1 { color: #dc3545; margin-bottom: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class='error-container'>
+            <h1>❌ Admin Cannot Access Shop</h1>
+            <p>Admins can only view and manage orders, not place them.</p>
+            <p>Please switch to a regular user account to shop.</p>
+            <a href='admin_dashboard.php' class='btn btn-primary mt-3'>Go to Admin Dashboard</a>
+        </div>
+    </body>
+    </html>
+    ");
+}
+
 require_once "config.php";
 require_once "notification_service.php";
 
@@ -427,7 +453,7 @@ while ($row = $result->fetch_assoc()) {
             <a href="orders_new.php">
                 <i class="fas fa-shopping-bag"></i> My Orders
             </a>
-            <a href="profile_enhanced.php">
+            <a href="profile.php">
                 <i class="fas fa-user-circle"></i> Profile
             </a>
             <form action="logout.php" method="POST" style="margin: 0; padding: 0;">

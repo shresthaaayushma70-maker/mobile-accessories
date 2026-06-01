@@ -22,9 +22,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     </head>
     <body>
         <div class='error-container'>
-            <h1>❌ Admin Cannot Place Orders</h1>
-            <p>Admin users can only view and manage orders, not place them.</p>
-            <p>Please switch to a regular user account to place orders.</p>
+            <h1>❌ Admins Cannot Place Orders</h1>
+            <p>Admin accounts are for managing orders and products only.</p>
+            <p>Please use a regular customer account to place orders.</p>
             <a href='admin_dashboard.php' class='btn btn-primary mt-3'>Go to Admin Dashboard</a>
         </div>
     </body>
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $total_amount = $product['price'] * $quantity;
         
         // Insert order
-        $order_sql = "INSERT INTO orders (user_id, order_number, total_amount, customer_name, customer_email, customer_phone, street, city, state, postal_code, country, payment_method, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')";
+        $order_sql = "INSERT INTO orders (user_id, order_number, total_amount, customer_name, customer_email, customer_phone, street, city, state, postal_code, country, payment_method, status, placed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Order Placed', NOW())";
         $order_stmt = mysqli_prepare($conn, $order_sql);
         
         if ($order_stmt === false) {

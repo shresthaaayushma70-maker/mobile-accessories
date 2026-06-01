@@ -35,10 +35,10 @@ if ($status_filter !== 'all') {
 
 // Add search filter (Order ID, Address, or City)
 if (!empty($search_query)) {
-    $sql .= " AND (o.id LIKE ? OR o.address_line1 LIKE ? OR o.city LIKE ?)";
+    $sql .= " AND (o.id LIKE ? OR o.street LIKE ? OR o.city LIKE ?)";
 }
 
-$sql .= " ORDER BY o.placed_at DESC";
+$sql .= " ORDER BY COALESCE(o.placed_at, o.created_at) DESC";
 
 $stmt = mysqli_prepare($conn, $sql);
 
@@ -491,7 +491,7 @@ $total_orders = array_sum($status_counts);
                             <div class="order-details">
                                 <div class="order-details-row">
                                     <span class="order-details-label">Date:</span>
-                                    <span class="order-details-value"><?php echo date('M d, Y', strtotime($order['placed_at'])); ?></span>
+                                    <span class="order-details-value"><?php echo format_order_datetime($order, 'M d, Y'); ?></span>
                                 </div>
                                 <div class="order-details-row">
                                     <span class="order-details-label">Total:</span>
@@ -499,7 +499,13 @@ $total_orders = array_sum($status_counts);
                                 </div>
                                 <div class="order-details-row">
                                     <span class="order-details-label">Address:</span>
-                                    <span class="order-details-value"><?php echo substr($order['address_line1'] ?? 'Address not provided', 0, 30) . '...'; ?></span>
+                                    <span class="order-details-value"><?php 
+                                        $address_parts = [];
+                                        if (!empty($order['street'])) $address_parts[] = $order['street'];
+                                        if (!empty($order['city'])) $address_parts[] = $order['city'];
+                                        $address = !empty($address_parts) ? implode(', ', $address_parts) : 'Address not provided';
+                                        echo substr(htmlspecialchars($address), 0, 30) . '...';
+                                    ?></span>
                                 </div>
                                 <div class="order-details-row">
                                     <span class="order-details-label">City:</span>

@@ -430,7 +430,7 @@ function send_notification_email($conn, $user_id, $order_id, $status) {
 function generate_notification_email($user, $order, $status) {
     $notification = get_notification_for_status($status);
     
-    $order_date = date('M d, Y', strtotime($order['placed_at']));
+    $order_date = format_order_datetime($order, 'M d, Y');
     $order_number = $order['order_number'];
     $amount = number_format($order['total_amount'], 2);
     $customer_name = $user['name'];
@@ -600,7 +600,7 @@ function get_recent_orders($conn, $limit = 5, $user_id = null) {
     $sql = "SELECT o.id, o.order_number, o.status, o.total_amount, o.placed_at, o.customer_name
             FROM orders o
             {$where}
-            ORDER BY o.placed_at DESC
+            ORDER BY COALESCE(o.placed_at, o.created_at) DESC
             LIMIT ?";
     
     $stmt = mysqli_prepare($conn, $sql);

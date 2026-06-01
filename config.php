@@ -155,4 +155,27 @@ function get_user_stats($conn, $user_id) {
 function format_currency($amount) {
     return '₹' . number_format($amount, 2);
 }
+
+/**
+ * Get the best available order timestamp.
+ */
+function get_order_datetime($order) {
+    if (!empty($order['placed_at']) && $order['placed_at'] !== '0000-00-00 00:00:00') {
+        return $order['placed_at'];
+    }
+
+    if (!empty($order['created_at']) && $order['created_at'] !== '0000-00-00 00:00:00') {
+        return $order['created_at'];
+    }
+
+    return null;
+}
+
+/**
+ * Format order date/time using placed_at if available, otherwise created_at.
+ */
+function format_order_datetime($order, $format = 'M d, Y \a\t h:i A') {
+    $datetime = get_order_datetime($order);
+    return $datetime ? date($format, strtotime($datetime)) : 'Date not available';
+}
 ?>

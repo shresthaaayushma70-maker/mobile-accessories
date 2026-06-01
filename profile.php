@@ -6,6 +6,32 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     exit;
 }
 
+// Prevent admin from accessing user profile
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+    die("
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Access Denied</title>
+        <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'>
+        <style>
+            body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f8f9fa; }
+            .error-container { text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .error-container h1 { color: #dc3545; margin-bottom: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class='error-container'>
+            <h1>❌ Admin Cannot Access User Profile</h1>
+            <p>This is a user profile page.</p>
+            <p>Admins do not have personal profiles in the customer system.</p>
+            <a href='admin_dashboard.php' class='btn btn-primary mt-3'>Go to Admin Dashboard</a>
+        </div>
+    </body>
+    </html>
+    ");
+}
+
 require_once "config.php";
 
 $user_id = $_SESSION['user_id'];

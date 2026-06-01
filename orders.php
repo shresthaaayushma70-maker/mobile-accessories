@@ -702,7 +702,10 @@ $orders_result = mysqli_stmt_get_result($stmt);
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                                 <div>
                                     <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">Address</div>
-                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php echo htmlspecialchars($order['address_line1'] ?? $order['street'] ?? 'Not provided'); ?></div>
+                                    <div style="font-size: 14px; color: #333; font-weight: 500;"><?php 
+                                        $address_display = !empty($order['street']) ? htmlspecialchars($order['street']) : 'Address not provided';
+                                        echo $address_display;
+                                    ?></div>
                                 </div>
                                 <div>
                                     <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">City</div>

@@ -65,7 +65,7 @@ if (!empty($filter_status)) {
     $sql .= " AND o.status = '$filter_status'";
 }
 
-$sql .= " ORDER BY o.created_at DESC";
+$sql .= " ORDER BY COALESCE(o.placed_at, o.created_at) DESC";
 
 $result = mysqli_query($conn, $sql);
 if (!$result) {
@@ -426,7 +426,7 @@ $all_statuses = ['Order Placed', 'Confirmed', 'Processing', 'Packing', 'Out for 
                                     </span>
                                 </td>
                                 <td>
-                                    <small><?php echo date('M d, Y', strtotime($order['created_at'])); ?></small>
+                                    <small><?php echo format_order_datetime($order, 'M d, Y'); ?></small>
                                 </td>
                                 <td>
                                     <button class="action-btn" onclick="openStatusModal(<?php echo $order['id']; ?>, '<?php echo htmlspecialchars($order['order_number']); ?>', '<?php echo htmlspecialchars($order['status']); ?>')">

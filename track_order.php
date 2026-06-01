@@ -35,6 +35,9 @@ if (!$order) {
     die("Order not found");
 }
 
+$order_timestamp = get_order_datetime($order);
+$placed_at_display = $order_timestamp ? date('M d, Y \a\t h:i A', strtotime($order_timestamp)) : 'Processing';
+
 // Get order items
 $items_sql = "SELECT * FROM order_items WHERE order_id = ?";
 $items_stmt = mysqli_prepare($conn, $items_sql);
@@ -52,10 +55,12 @@ $history = get_order_status_history($conn, $order_id);
 
 // Calculate delivery days if delivered
 $delivery_days = null;
-if ($order['status'] === 'Delivered' && $order['delivered_at']) {
-    $placed_time = strtotime($order['placed_at']);
+if ($order['status'] === 'Delivered' && !empty($order['delivered_at']) && $order_timestamp) {
+    $placed_time = strtotime($order_timestamp);
     $delivered_time = strtotime($order['delivered_at']);
-    $delivery_days = floor(($delivered_time - $placed_time) / 86400);
+    if ($placed_time && $delivered_time) {
+        $delivery_days = floor(($delivered_time - $placed_time) / 86400);
+    }
 }
 
 // Estimate delivery date
@@ -267,7 +272,7 @@ $current_style = $status_colors[$order['status']] ?? ['color' => '#666', 'icon' 
                                     <div class="timeline-content">
                                         <h4>Order Placed</h4>
                                         <div class="status-time">
-                                            <?php echo (!empty($order['placed_at']) && $order['placed_at'] !== '0000-00-00 00:00:00') ? date('M d, Y \a\t h:i A', strtotime($order['placed_at'])) : 'Processing'; ?>
+                                            <?php echo $placed_at_display; ?>
                                         </div>
                                         <p style="margin: 0; color: #666;">Your order has been successfully placed.</p>
                                     </div>
@@ -417,13 +422,36 @@ $current_style = $status_colors[$order['status']] ?? ['color' => '#666', 'icon' 
                                 </label>
                                 <div class="address-box">
                                     <p style="margin: 0; color: #333;">
-                                        <?php echo !empty($order['address_line1']) ? htmlspecialchars($order['address_line1']) : 'Address not provided'; ?>
-                                        <?php if (!empty($order['address_line2'])): ?>
-                                            <br><?php echo htmlspecialchars($order['address_line2']); ?>
-                                        <?php endif; ?>
-                                        <?php if (!empty($order['street'])): ?><br><?php echo htmlspecialchars($order['street']); ?><?php endif; ?>
-                                        <?php if (!empty($order['city']) || !empty($order['state']) || !empty($order['postal_code'])): ?><br><?php echo htmlspecialchars($order['city'] ?? ''); ?><?php echo !empty($order['state']) ? ', ' . htmlspecialchars($order['state']) : ''; ?> <?php echo htmlspecialchars($order['postal_code'] ?? ''); ?><?php endif; ?>
-                                        <?php if (!empty($order['country'])): ?><br><?php echo htmlspecialchars($order['country']); ?><?php endif; ?>
+                                        <?php
+                                        $address_lines = [];
+                                        if (!empty($order['street'])) {
+                                            $address_lines[] = htmlspecialchars($order['street']);
+                                        }
+
+                                        $city_parts = [];
+                                        if (!empty($order['city'])) {
+                                            $city_parts[] = htmlspecialchars($order['city']);
+                                        }
+                                        if (!empty($order['state'])) {
+                                            $city_parts[] = htmlspecialchars($order['state']);
+                                        }
+                                        if (!empty($order['postal_code'])) {
+                                            $city_parts[] = htmlspecialchars($order['postal_code']);
+                                        }
+                                        if (!empty($city_parts)) {
+                                            $address_lines[] = implode(', ', $city_parts);
+                                        }
+
+                                        if (!empty($order['country'])) {
+                                            $address_lines[] = htmlspecialchars($order['country']);
+                                        }
+
+                                        if (!empty($address_lines)) {
+                                            echo implode('<br>', $address_lines);
+                                        } else {
+                                            echo 'Address not provided';
+                                        }
+                                        ?>
                                     </p>
                                 </div>
                             </div>
@@ -446,7 +474,7 @@ $current_style = $status_colors[$order['status']] ?? ['color' => '#666', 'icon' 
                             <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
                                 <label style="color: #666; margin-bottom: 5px;">Order Date</label>
                                 <p style="margin: 0; font-weight: 600; color: #001a33;">
-                                    <?php echo (!empty($order['placed_at']) && $order['placed_at'] !== '0000-00-00 00:00:00') ? date('d M, Y', strtotime($order['placed_at'])) : 'Date not available'; ?>
+                                    <?php echo format_order_datetime($order, 'd M, Y'); ?>
                                 </p>
                             </div>
 
