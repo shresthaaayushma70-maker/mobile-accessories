@@ -420,7 +420,7 @@ $total_orders = array_sum($status_counts);
                     <span class="notification-badge"><?php echo $unread_count; ?></span>
                 <?php endif; ?>
             </a>
-            <a href="profile_enhanced.php" title="Profile">
+            <a href="profile.php" title="Profile">
                 <i class="fas fa-user"></i>
             </a>
         </div>
@@ -434,7 +434,7 @@ $total_orders = array_sum($status_counts);
         <a href="orders_new.php" class="<?php echo strpos($_SERVER['PHP_SELF'], 'orders_new') !== false ? 'active' : ''; ?>">
             <i class="fas fa-shopping-bag"></i> My Orders
         </a>
-        <a href="profile_enhanced.php" class="<?php echo strpos($_SERVER['PHP_SELF'], 'profile') !== false ? 'active' : ''; ?>">
+        <a href="profile.php" class="<?php echo strpos($_SERVER['PHP_SELF'], 'profile') !== false ? 'active' : ''; ?>">
             <i class="fas fa-user"></i> Profile
         </a>
         <a href="logout.php">

@@ -49,9 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['update'])) {
         $name = sanitize_input($_POST['name']);
         $email = sanitize_input($_POST['email']);
-        $phone = sanitize_input($_POST['phone']);
+        $phone = sanitize_input($_POST['phone'] ?? '');
         $username = sanitize_input($_POST['username']);
-        $password = sanitize_input($_POST['password']);
+        $new_password = !empty($_POST['password']) ? sanitize_input($_POST['password']) : null;
         
         $errors = [];
         
@@ -76,9 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_stmt_close($stmt);
         }
         
-        // Validate phone
+        // Validate phone (optional, but must be 10 digits if provided)
         if (!empty($phone) && !preg_match('/^[0-9]{10}$/', $phone)) {
-            $errors[] = "Phone number must be 10 digits";
+            $errors[] = "Phone number must be 10 digits (or leave empty)";
         }
         
         // Validate username
@@ -97,32 +97,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_stmt_close($stmt);
         }
         
-        // Validate password
-        if (empty($password) || strlen($password) < 6) {
+        // Validate new password if provided
+        if ($new_password !== null && strlen($new_password) < 6) {
             $errors[] = "Password must be at least 6 characters";
         }
         
         if (empty($errors)) {
-            $sql = "UPDATE users SET name=?, email=?, phone=?, username=?, password=? WHERE id=?";
-            $stmt = mysqli_prepare($conn, $sql);
-            
-            if ($stmt === false) {
-                $error_msg = "Database error: " . mysqli_error($conn);
-            } else {
-                mysqli_stmt_bind_param($stmt, "sssssi", $name, $email, $phone, $username, $password, $user_id);
-            
-            if (mysqli_stmt_execute($stmt)) {
-                log_activity($conn, $user_id, "Profile Update", "User updated profile");
-                $success_msg = "Profile updated successfully!";
-                $_SESSION['username'] = $username;
+            // Build dynamic UPDATE query based on whether password was changed
+            if ($new_password !== null) {
+                $sql = "UPDATE users SET name=?, email=?, phone=?, username=?, password=? WHERE id=?";
+                $stmt = mysqli_prepare($conn, $sql);
                 
-                // Refresh user data
-                $user = mysqli_query($conn, "SELECT * FROM users WHERE id = $user_id");
-                $user = mysqli_fetch_assoc($user);
+                if ($stmt === false) {
+                    $error_msg = "Database error: " . mysqli_error($conn);
+                } else {
+                    mysqli_stmt_bind_param($stmt, "sssssi", $name, $email, $phone, $username, $new_password, $user_id);
+                    
+                    if (mysqli_stmt_execute($stmt)) {
+                        log_activity($conn, $user_id, "Profile Update", "User updated profile and password");
+                        $success_msg = "Profile and password updated successfully!";
+                        $_SESSION['username'] = $username;
+                        
+                        // Refresh user data from database
+                        $refresh_query = "SELECT * FROM users WHERE id = ?";
+                        $refresh_stmt = mysqli_prepare($conn, $refresh_query);
+                        mysqli_stmt_bind_param($refresh_stmt, "i", $user_id);
+                        mysqli_stmt_execute($refresh_stmt);
+                        $refresh_result = mysqli_stmt_get_result($refresh_stmt);
+                        $user = mysqli_fetch_assoc($refresh_result);
+                        mysqli_stmt_close($refresh_stmt);
+                    } else {
+                        $error_msg = "Error updating profile: " . mysqli_error($conn);
+                    }
+                    mysqli_stmt_close($stmt);
+                }
             } else {
-                $error_msg = "Error updating profile: " . mysqli_error($conn);
-            }
-            mysqli_stmt_close($stmt);
+                // Update without password
+                $sql = "UPDATE users SET name=?, email=?, phone=?, username=? WHERE id=?";
+                $stmt = mysqli_prepare($conn, $sql);
+                
+                if ($stmt === false) {
+                    $error_msg = "Database error: " . mysqli_error($conn);
+                } else {
+                    mysqli_stmt_bind_param($stmt, "ssssi", $name, $email, $phone, $username, $user_id);
+                    
+                    if (mysqli_stmt_execute($stmt)) {
+                        log_activity($conn, $user_id, "Profile Update", "User updated profile");
+                        $success_msg = "Profile updated successfully!";
+                        $_SESSION['username'] = $username;
+                        
+                        // Refresh user data from database
+                        $refresh_query = "SELECT * FROM users WHERE id = ?";
+                        $refresh_stmt = mysqli_prepare($conn, $refresh_query);
+                        mysqli_stmt_bind_param($refresh_stmt, "i", $user_id);
+                        mysqli_stmt_execute($refresh_stmt);
+                        $refresh_result = mysqli_stmt_get_result($refresh_stmt);
+                        $user = mysqli_fetch_assoc($refresh_result);
+                        mysqli_stmt_close($refresh_stmt);
+                    } else {
+                        $error_msg = "Error updating profile: " . mysqli_error($conn);
+                    }
+                    mysqli_stmt_close($stmt);
+                }
             }
         } else {
             $error_msg = implode("<br>", $errors);
@@ -509,10 +545,10 @@ mysqli_close($conn);
             <div class="section">
                 <h3><i class="fas fa-lock"></i> Password</h3>
                 <div class="form-group">
-                    <label for="password">Password <span style="color: red;">*</span></label>
+                    <label for="password">New Password <span style="color: #999;">(Optional)</span></label>
                     <input type="password" class="form-control" name="password" id="password" 
-                           value="<?php echo htmlspecialchars($user['password'] ?? ''); ?>" required>
-                    <small class="text-muted">Minimum 6 characters</small>
+                           placeholder="Leave empty to keep current password">
+                    <small class="text-muted">Minimum 6 characters. Leave empty to keep your current password.</small>
                 </div>
             </div>
             
