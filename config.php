@@ -178,4 +178,147 @@ function format_order_datetime($order, $format = 'M d, Y \a\t h:i A') {
     $datetime = get_order_datetime($order);
     return $datetime ? date($format, strtotime($datetime)) : 'Date not available';
 }
+
+// ========================================
+// PROFILE PICTURE MANAGEMENT FUNCTIONS
+// ========================================
+
+/**
+ * Get profile picture path for a user
+ * Returns the image path if exists, or null if no profile picture
+ */
+function get_profile_picture_path($user) {
+    if (!empty($user['profile_picture']) && file_exists($user['profile_picture'])) {
+        return $user['profile_picture'];
+    }
+    return null;
+}
+
+/**
+ * Validate profile picture file
+ */
+function validate_profile_picture($file) {
+    $errors = [];
+    
+    // Check if file exists
+    if (!isset($file['tmp_name']) || empty($file['tmp_name'])) {
+        $errors[] = "No file uploaded";
+        return $errors;
+    }
+    
+    // Check file size (max 5MB)
+    $max_size = 5 * 1024 * 1024;
+    if ($file['size'] > $max_size) {
+        $errors[] = "File size must be less than 5MB";
+    }
+    
+    // Check MIME type
+    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    if (!in_array($mime_type, $allowed_types)) {
+        $errors[] = "Only JPG, PNG, and WEBP files are allowed";
+    }
+    
+    // Verify it's actually an image
+    $image_info = @getimagesize($file['tmp_name']);
+    if ($image_info === false) {
+        $errors[] = "File is not a valid image";
+    }
+    
+    return $errors;
+}
+
+
+/**
+ * Upload and save profile picture
+ */
+function upload_profile_picture($conn, $user_id, $file) {
+    // Validate file
+    $validation_errors = validate_profile_picture($file);
+    if (!empty($validation_errors)) {
+        return ['success' => false, 'message' => implode(', ', $validation_errors)];
+    }
+    
+    // Create uploads/profiles directory if needed
+    if (!is_dir('uploads/profiles')) {
+        mkdir('uploads/profiles', 0755, true);
+    }
+    
+    // Generate unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = 'user_' . $user_id . '_' . time() . '.' . strtolower($extension);
+    $upload_path = 'uploads/profiles/' . $filename;
+    
+    // Move uploaded file
+    if (!move_uploaded_file($file['tmp_name'], $upload_path)) {
+        return ['success' => false, 'message' => 'Failed to upload image. Check directory permissions.'];
+    }
+    
+    // Get old profile picture to delete
+    $old_pic_result = mysqli_query($conn, "SELECT profile_picture FROM users WHERE id = $user_id");
+    if ($old_pic_result && mysqli_num_rows($old_pic_result) > 0) {
+        $user_row = mysqli_fetch_assoc($old_pic_result);
+        $old_pic = $user_row['profile_picture'];
+        
+        // Delete old picture if it exists and is not default
+        if (!empty($old_pic) && file_exists($old_pic) && strpos($old_pic, 'uploads/profiles/') !== false) {
+            unlink($old_pic);
+        }
+    }
+    
+    // Update database
+    $sql = "UPDATE users SET profile_picture = ? WHERE id = ?";
+    $stmt = mysqli_prepare($conn, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "si", $upload_path, $user_id);
+        if (mysqli_stmt_execute($stmt)) {
+            mysqli_stmt_close($stmt);
+            return ['success' => true, 'message' => 'Profile picture uploaded successfully!', 'path' => $upload_path];
+        } else {
+            mysqli_stmt_close($stmt);
+            // Delete uploaded file if DB update failed
+            if (file_exists($upload_path)) {
+                unlink($upload_path);
+            }
+            return ['success' => false, 'message' => 'Failed to save image information to database'];
+        }
+    }
+    
+    // Delete uploaded file if stmt prepare failed
+    if (file_exists($upload_path)) {
+        unlink($upload_path);
+    }
+    return ['success' => false, 'message' => 'Database error occurred'];
+}
+
+/**
+ * Get avatar HTML for a user (returns img tag or icon)
+ */
+function get_user_avatar_html($user, $size = 'md', $class = '') {
+    $profile_pic = get_profile_picture_path($user);
+    
+    // Map sizes to CSS classes
+    $size_classes = [
+        'sm' => 'avatar-sm',
+        'md' => 'avatar-md',
+        'lg' => 'avatar-lg',
+        'xl' => 'avatar-xl'
+    ];
+    
+    $avatar_class = isset($size_classes[$size]) ? $size_classes[$size] : $size_classes['md'];
+    if (!empty($class)) {
+        $avatar_class .= ' ' . $class;
+    }
+    
+    if ($profile_pic) {
+        $safe_pic = htmlspecialchars($profile_pic);
+        $safe_name = htmlspecialchars($user['name'] ?? $user['username'] ?? 'User');
+        return "<img src=\"{$safe_pic}\" alt=\"{$safe_name}\" class=\"{$avatar_class}\" />";
+    } else {
+        return "<div class=\"{$avatar_class} avatar-default\"><i class=\"fas fa-user\"></i></div>";
+    }
+}
 ?>

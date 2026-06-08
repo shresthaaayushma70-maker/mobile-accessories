@@ -18,6 +18,15 @@ require_once "notification_service.php";
 $user_id = $_SESSION['user_id'];
 $order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
 
+// Fetch user details for avatar display
+$user_sql_fetch = "SELECT * FROM users WHERE id = ?";
+$user_stmt_fetch = mysqli_prepare($conn, $user_sql_fetch);
+mysqli_stmt_bind_param($user_stmt_fetch, "i", $user_id);
+mysqli_stmt_execute($user_stmt_fetch);
+$user_result_fetch = mysqli_stmt_get_result($user_stmt_fetch);
+$current_user = mysqli_fetch_assoc($user_result_fetch);
+mysqli_stmt_close($user_stmt_fetch);
+
 // Get order details
 $order_sql = "SELECT o.*, u.name as user_name FROM orders o 
               LEFT JOIN users u ON o.user_id = u.id 

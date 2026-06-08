@@ -364,6 +364,33 @@ while ($row = $result->fetch_assoc()) {
             margin-bottom: 10px;
         }
         
+        /* Avatar Styles */
+        .avatar-sm { width: 32px; height: 32px; }
+        .avatar-md { width: 48px; height: 48px; }
+        .avatar-lg { width: 64px; height: 64px; }
+        .avatar-xl { width: 80px; height: 80px; }
+        
+        .avatar-sm,
+        .avatar-md,
+        .avatar-lg,
+        .avatar-xl {
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e0e0e0;
+            display: block;
+        }
+        
+        .avatar-default {
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid #e0e0e0;
+        }
+        
         @media (max-width: 768px) {
             .products-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -436,8 +463,8 @@ while ($row = $result->fetch_assoc()) {
                 </div>
 
                 <!-- Profile quick link -->
-                <a href="profile.php" style="color: white; text-decoration: none;">
-                    <i class="fas fa-user-circle" style="font-size: 18px;"></i>
+                <a href="profile.php" style="color: white; text-decoration: none; display: flex; align-items: center;">
+                    <?php echo get_user_avatar_html($user, 'sm'); ?>
                 </a>
             </div>
         </div>

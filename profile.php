@@ -165,6 +165,67 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
     
+    // Handle profile picture upload (for both file and camera)
+    if (isset($_POST['upload_picture'])) {
+        // Debug logging
+        error_log("=== PROFILE PICTURE UPLOAD ===");
+        error_log("POST data: " . json_encode($_POST));
+        error_log("FILES keys: " . json_encode(array_keys($_FILES)));
+        
+        // Check if file exists in $_FILES
+        if (isset($_FILES['profile_picture']) && !empty($_FILES['profile_picture']['tmp_name'])) {
+            error_log("File found in FILES: " . $_FILES['profile_picture']['name']);
+            error_log("File size: " . $_FILES['profile_picture']['size']);
+            error_log("File type: " . $_FILES['profile_picture']['type']);
+            error_log("File tmp: " . $_FILES['profile_picture']['tmp_name']);
+            
+            $upload_result = upload_profile_picture($conn, $user_id, $_FILES['profile_picture']);
+            error_log("Upload result: " . json_encode($upload_result));
+            
+            if ($upload_result['success']) {
+                $success_msg = $upload_result['message'];
+                log_activity($conn, $user_id, "Profile Picture Updated", "User uploaded a new profile picture");
+                
+                // Refresh user data from database
+                $refresh_query = "SELECT * FROM users WHERE id = ?";
+                $refresh_stmt = mysqli_prepare($conn, $refresh_query);
+                mysqli_stmt_bind_param($refresh_stmt, "i", $user_id);
+                mysqli_stmt_execute($refresh_stmt);
+                $refresh_result = mysqli_stmt_get_result($refresh_stmt);
+                $user = mysqli_fetch_assoc($refresh_result);
+                mysqli_stmt_close($refresh_stmt);
+                
+                // If AJAX request, return JSON response
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => $upload_result['message']]);
+                    exit;
+                }
+            } else {
+                $error_msg = $upload_result['message'];
+                
+                // If AJAX request, return JSON response
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => $upload_result['message']]);
+                    exit;
+                }
+            }
+        } else {
+            error_log("No file found in FILES");
+            $error_msg = "No file selected for upload";
+            
+            // If AJAX request, return JSON response
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'No file uploaded']);
+                exit;
+            }
+        }
+    }
+    
     if (isset($_POST['delete'])) {
         // Log the deletion before deleting the user
         log_activity($conn, $user_id, "Account Deletion", "User deleted their account");
@@ -442,6 +503,204 @@ mysqli_close($conn);
         .user-info-display strong {
             color: #333;
         }
+        
+        /* Avatar Styles */
+        .avatar-sm { width: 32px; height: 32px; }
+        .avatar-md { width: 48px; height: 48px; }
+        .avatar-lg { width: 64px; height: 64px; }
+        .avatar-xl { width: 80px; height: 80px; }
+        
+        .avatar-sm,
+        .avatar-md,
+        .avatar-lg,
+        .avatar-xl {
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e0e0e0;
+            display: block;
+        }
+        
+        .avatar-default {
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .profile-picture-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            box-shadow: none;
+        }
+        
+        .profile-picture-container {
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .profile-avatar {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        
+        .clickable-avatar {
+            cursor: pointer;
+        }
+        
+        .clickable-avatar:hover {
+            transform: scale(1.05);
+            filter: brightness(0.95);
+        }
+        
+        #changePhotoIconBtn:hover {
+            background: #5568d3 !important;
+            transform: scale(1.1);
+        }
+        
+        .profile-picture-info {
+            flex: 1;
+        }
+        
+        .profile-picture-info .btn {
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .profile-picture-info .btn-primary {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        
+        .profile-picture-info .btn-primary:hover {
+            background: #5568d3;
+            border-color: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .profile-picture-info .btn-info {
+            background: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+        
+        .profile-picture-info .btn-info:hover {
+            background: #138496;
+            border-color: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+        }
+        
+        #previewContainer {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        #previewImage {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        
+        /* Camera Modal Styling */
+        #cameraModal button {
+            font-size: 13px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        #cameraModal .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        #cameraModal .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        #cameraModal .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        #cameraModal .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        #cameraModal .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        #cameraModal .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+        
+        #cameraModal .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        #cameraModal .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        
+        #cameraModal .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        #cameraFeed {
+            object-fit: cover;
+        }
+        
+        @media (max-width: 600px) {
+            #cameraModal {
+                padding: 10px;
+            }
+            
+            #cameraModal > div > div {
+                max-width: 100% !important;
+                border-radius: 12px !important;
+            }
+            
+            #cameraModal button {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -495,6 +754,57 @@ mysqli_close($conn);
             </div>
         <?php endif; ?>
         
+        <!-- Profile Picture Upload Form (SEPARATE - Must be outside main form) -->
+        <form method="post" enctype="multipart/form-data" id="pictureUploadForm">
+            <div class="profile-picture-section">
+                <div class="profile-picture-container" style="position: relative;">
+                    <?php echo get_user_avatar_html($user, 'xl', 'profile-avatar clickable-avatar'); ?>
+                    <div style="position: absolute; bottom: 5px; right: 5px; background: #667eea; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: all 0.3s ease;" id="changePhotoIconBtn" title="Click to change photo">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+                <div class="profile-picture-info">
+                    <p style="margin-bottom: 12px; color: #666;">
+                        <small><strong><?php echo htmlspecialchars($user['name'] ?? $user['username']); ?></strong></small>
+                    </p>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" id="changePhotoBtn" class="btn btn-sm btn-primary" style="font-size: 11px; padding: 5px 10px;">
+                            <i class="fas fa-upload"></i> Upload
+                        </button>
+                        <button type="button" id="takePhotoBtn" class="btn btn-sm btn-info" style="font-size: 11px; padding: 5px 10px;">
+                            <i class="fas fa-video"></i> Camera
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hidden File Input -->
+            <input type="file" id="profilePictureInput" name="profile_picture" accept=".jpg,.jpeg,.png,.webp" style="display: none;">
+            
+            <!-- Image Preview -->
+            <div id="previewContainer" style="display: none; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <label style="font-weight: 600; margin-bottom: 10px; display: block;">Preview:</label>
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <img id="previewImage" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: center;">
+                    <button type="submit" name="upload_picture" class="btn btn-primary btn-sm">
+                        <i class="fas fa-check"></i> Save
+                    </button>
+                    <button type="button" id="cancelPreviewBtn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+            
+            <div id="uploadProgress" style="display: none; margin: 15px 0; padding: 12px; border-radius: 6px; text-align: center;">
+                <div style="background: #f0f0f0; border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 10px;">
+                    <div id="progressBar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                </div>
+                <p style="text-align: center; color: #666; font-size: 12px; margin: 0;">Uploading...</p>
+            </div>
+        </form>
+        
         <div class="user-info-display">
             <p><strong>Account Created:</strong> <?php echo date('F d, Y', strtotime($user['created_at'])); ?></p>
             <?php if (!empty($user['last_login'])): ?>
@@ -542,6 +852,8 @@ mysqli_close($conn);
                 </div>
             </div>
             
+            <!-- Profile Picture Upload Section - REMOVED (now separate form above) -->
+            
             <div class="section">
                 <h3><i class="fas fa-lock"></i> Password</h3>
                 <div class="form-group">
@@ -574,8 +886,500 @@ mysqli_close($conn);
         </div>
         <!-- End container-main -->
     <?php endif; ?>
+    
+    <!-- Camera Capture Modal -->
+    <div id="cameraModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; overflow-y: auto;">
+        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;">
+            <div style="background: white; border-radius: 16px; padding: 20px; max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <!-- Camera Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 20px; color: #333;">Take Profile Photo</h3>
+                    <button type="button" id="closeCameraBtn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Camera View -->
+                <div id="cameraSection" style="margin-bottom: 20px;">
+                    <video id="cameraFeed" style="width: 100%; border-radius: 12px; background: #000; display: none;" playsinline autoplay muted></video>
+                    <canvas id="captureCanvas" style="display: none;"></canvas>
+                    
+                    <!-- Camera Placeholder/Loading -->
+                    <div id="cameraPlaceholder" style="background: #f0f0f0; border-radius: 12px; padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px;">
+                        <i class="fas fa-video" style="font-size: 48px; color: #999; margin-bottom: 12px;"></i>
+                        <p style="color: #666; margin: 0; font-size: 14px;">Initializing camera...</p>
+                    </div>
+                    
+                    <!-- Preview of Captured Image -->
+                    <img id="capturedImagePreview" src="" alt="Captured" style="width: 100%; border-radius: 12px; display: none; margin-bottom: 20px;">
+                </div>
+                
+                <!-- Permissions Message -->
+                <div id="permissionMessage" style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 20px; color: #856404; display: none; font-size: 13px;">
+                    <i class="fas fa-info-circle"></i> Camera access is required to take a photo. Please allow access when prompted.
+                </div>
+                
+                <!-- Error Message -->
+                <div id="cameraError" style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 12px; margin-bottom: 20px; color: #721c24; display: none; font-size: 13px;">
+                    <i class="fas fa-exclamation-circle"></i> <span id="cameraErrorText"></span>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" id="closeCameraBtn2" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" id="retakePhotoBtn" class="btn btn-warning btn-sm" style="display: none;">
+                        <i class="fas fa-redo"></i> Retake
+                    </button>
+                    <button type="button" id="capturePhotoBtn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-camera"></i> Capture
+                    </button>
+                    <button type="button" id="usePhotoBtn" class="btn btn-success btn-sm" style="display: none;">
+                        <i class="fas fa-check"></i> Use Photo
+                    </button>
+                </div>
+                
+                <!-- Upload Progress (for camera modal) -->
+                <div id="cameraUploadProgress" style="display: none; margin-top: 20px;">
+                    <div style="background: #f0f0f0; border-radius: 8px; height: 8px; overflow: hidden;">
+                        <div id="cameraProgressBar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <p style="text-align: center; color: #666; font-size: 12px; margin: 8px 0 0 0;">Uploading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        // ===== CAMERA CAPTURE SYSTEM =====
+        let cameraStream = null;
+        let capturedBlob = null;
+        
+        // Get DOM Elements
+        const fileInput = document.getElementById('profilePictureInput');
+        const changePhotoBtn = document.getElementById('changePhotoBtn');
+        const takePhotoBtn = document.getElementById('takePhotoBtn');
+        const changePhotoIconBtn = document.getElementById('changePhotoIconBtn');
+        const cameraModal = document.getElementById('cameraModal');
+        const closeCameraBtn = document.getElementById('closeCameraBtn');
+        const closeCameraBtn2 = document.getElementById('closeCameraBtn2');
+        const cameraFeed = document.getElementById('cameraFeed');
+        const captureCanvas = document.getElementById('captureCanvas');
+        const capturedImagePreview = document.getElementById('capturedImagePreview');
+        const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+        const retakePhotoBtn = document.getElementById('retakePhotoBtn');
+        const usePhotoBtn = document.getElementById('usePhotoBtn');
+        const cameraSection = document.getElementById('cameraSection');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const permissionMessage = document.getElementById('permissionMessage');
+        const cameraError = document.getElementById('cameraError');
+        const cameraErrorText = document.getElementById('cameraErrorText');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressBar = document.getElementById('progressBar');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImageEl = document.getElementById('previewImage');
+        const uploadForm = document.getElementById('pictureUploadForm');
+        const cancelPreviewBtn = document.getElementById('cancelPreviewBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+                const avatar = document.querySelector('.clickable-avatar');
+        
+        // ===== FILE UPLOAD FUNCTIONS =====
+        
+        // Open file picker when Change Photo button is clicked
+        if (changePhotoBtn) {
+            changePhotoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fileInput.click();
+            });
+        }
+        
+        // Open file picker when camera icon is clicked (for file upload)
+        if (changePhotoIconBtn) {
+            changePhotoIconBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fileInput.click();
+            });
+        }
+        
+        // Open file picker when avatar image is clicked
+        if (avatar) {
+            avatar.style.cursor = 'pointer';
+            avatar.addEventListener('click', function(e) {
+                e.preventDefault();
+                fileInput.click();
+            });
+        }
+        
+        // Preview image when file is selected
+        function handleFilePreview(event) {
+            const file = event.target.files[0];
+
+            if (!file) {
+                previewContainer.style.display = 'none';
+                return;
+            }
+
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit. Please choose a smaller image.');
+                fileInput.value = '';
+                previewContainer.style.display = 'none';
+                return;
+            }
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                alert('Invalid file format. Please use JPG, PNG, or WEBP images.');
+                fileInput.value = '';
+                previewContainer.style.display = 'none';
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImageEl.src = e.target.result;
+                previewContainer.style.display = 'block';
+                uploadStatus.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Cancel preview and clear file input
+        if (cancelPreviewBtn) {
+            cancelPreviewBtn.addEventListener('click', function() {
+                fileInput.value = '';
+                previewContainer.style.display = 'none';
+                uploadStatus.style.display = 'none';
+            });
+        }
+
+        // Attach file input change listener
+        if (fileInput) {
+            fileInput.addEventListener('change', handleFilePreview);
+        }
+        
+        // Handle form submission for file uploads
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Check if this is an upload_picture submission
+                const submitBtn = e.submitter;
+                if (!submitBtn || submitBtn.name !== 'upload_picture') return;
+                
+                // Check if file is selected
+                if (!fileInput.files || !fileInput.files[0]) {
+                    alert('Please select a photo to upload');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('profile_picture', fileInput.files[0]);
+                formData.append('upload_picture', '1');
+                
+                // Show upload progress
+                uploadProgress.style.display = 'block';
+                progressBar.style.width = '0%';
+                
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 30;
+                        if (progress > 90) progress = 90;
+                        progressBar.style.width = progress + '%';
+                    }
+                }, 100);
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    clearInterval(progressInterval);
+                    
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Server error: ' + response.status);
+                    }
+                })
+                .then(data => {
+                    progressBar.style.width = '100%';
+                    
+                    if (data.success) {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 800);
+                    } else {
+                        clearInterval(progressInterval);
+                        uploadProgress.style.display = 'none';
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-check"></i> Save Picture';
+                        alert('Error: ' + (data.message || 'Upload failed'));
+                        fileInput.value = '';
+                        previewContainer.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+                    uploadProgress.style.display = 'none';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check"></i> Save Picture';
+                    alert('Error uploading photo: ' + error.message);
+                    console.error('Upload error:', error);
+                });
+            });
+        }
+        
+        // ===== CAMERA CAPTURE FUNCTIONS =====
+        
+        // Open camera modal
+        if (takePhotoBtn) {
+            takePhotoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openCameraModal();
+            });
+        }
+        
+        async function openCameraModal() {
+            cameraModal.style.display = 'flex';
+            permissionMessage.style.display = 'block';
+            cameraError.style.display = 'none';
+            capturePhotoBtn.style.display = 'inline-block';
+            retakePhotoBtn.style.display = 'none';
+            usePhotoBtn.style.display = 'none';
+            capturedImagePreview.style.display = 'none';
+            cameraPlaceholder.style.display = 'flex';
+            cameraFeed.style.display = 'none';
+            
+            try {
+                // Request camera access
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // Front camera on mobile
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+                
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraFeed.srcObject = cameraStream;
+                
+                // Wait for video to load
+                cameraFeed.onloadedmetadata = function() {
+                    cameraFeed.play();
+                    cameraPlaceholder.style.display = 'none';
+                    cameraFeed.style.display = 'block';
+                    permissionMessage.style.display = 'none';
+                };
+                
+            } catch (error) {
+                handleCameraError(error);
+            }
+        }
+        
+        function handleCameraError(error) {
+            cameraPlaceholder.style.display = 'flex';
+            cameraFeed.style.display = 'none';
+            cameraError.style.display = 'block';
+            permissionMessage.style.display = 'none';
+            
+            if (error.name === 'NotAllowedError') {
+                cameraErrorText.textContent = 'Camera access was denied. Please enable camera permissions in your browser settings.';
+            } else if (error.name === 'NotFoundError') {
+                cameraErrorText.textContent = 'No camera found on this device. Please use a device with a camera.';
+            } else if (error.name === 'NotSupportedError') {
+                cameraErrorText.textContent = 'Your browser does not support camera access. Please use a modern browser like Chrome, Firefox, Safari, or Edge.';
+            } else {
+                cameraErrorText.textContent = 'Error accessing camera: ' + error.message;
+            }
+        }
+        
+        // Capture photo from camera
+        if (capturePhotoBtn) {
+            capturePhotoBtn.addEventListener('click', function() {
+                if (!cameraStream || !cameraFeed.srcObject) {
+                    alert('Camera is not active. Please try again.');
+                    return;
+                }
+                
+                const context = captureCanvas.getContext('2d');
+                captureCanvas.width = cameraFeed.videoWidth;
+                captureCanvas.height = cameraFeed.videoHeight;
+                
+                // Draw video frame to canvas
+                context.drawImage(cameraFeed, 0, 0, captureCanvas.width, captureCanvas.height);
+                
+                // Convert canvas to blob and show preview
+                captureCanvas.toBlob(function(blob) {
+                    capturedBlob = blob;
+                    
+                    // Create preview URL
+                    const previewUrl = URL.createObjectURL(blob);
+                    capturedImagePreview.src = previewUrl;
+                    
+                    // Show preview, hide feed
+                    cameraFeed.style.display = 'none';
+                    capturedImagePreview.style.display = 'block';
+                    
+                    // Update buttons
+                    capturePhotoBtn.style.display = 'none';
+                    retakePhotoBtn.style.display = 'inline-block';
+                    usePhotoBtn.style.display = 'inline-block';
+                }, 'image/jpeg', 0.95);
+            });
+        }
+        
+        // Retake photo
+        if (retakePhotoBtn) {
+            retakePhotoBtn.addEventListener('click', function() {
+                capturedImagePreview.style.display = 'none';
+                cameraFeed.style.display = 'block';
+                capturePhotoBtn.style.display = 'inline-block';
+                retakePhotoBtn.style.display = 'none';
+                usePhotoBtn.style.display = 'none';
+                
+                // Clear blob
+                if (capturedBlob) {
+                    URL.revokeObjectURL(capturedImagePreview.src);
+                    capturedBlob = null;
+                }
+            });
+        }
+        
+        // Upload captured photo
+        if (usePhotoBtn) {
+            usePhotoBtn.addEventListener('click', async function() {
+                if (!capturedBlob) {
+                    alert('No photo captured. Please take a photo first.');
+                    return;
+                }
+
+                uploadCapturedPhoto();
+            });
+        }
+        
+        async function uploadCapturedPhoto() {
+            if (!capturedBlob) return;
+            
+            // Show upload progress
+            const cameraUploadProgress = document.getElementById('cameraUploadProgress');
+            const cameraProgressBar = document.getElementById('cameraProgressBar');
+            cameraUploadProgress.style.display = 'block';
+            cameraProgressBar.style.width = '0%';
+            
+            try {
+                const formData = new FormData();
+                formData.append('profile_picture', capturedBlob, 'camera_capture.jpg');
+                formData.append('upload_picture', '1');
+                
+                // Simulate progress
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 30;
+                        if (progress > 90) progress = 90;
+                        cameraProgressBar.style.width = progress + '%';
+                    }
+                }, 100);
+                
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                clearInterval(progressInterval);
+                cameraProgressBar.style.width = '100%';
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Close modal after short delay
+                        setTimeout(() => {
+                            closeCameraModal();
+                            // Reload page to show updated avatar
+                            location.reload();
+                        }, 800);
+                    } else {
+                        clearInterval(progressInterval);
+                        cameraUploadProgress.style.display = 'none';
+                        alert('Error: ' + (data.message || 'Upload failed'));
+                    }
+                } else {
+                    clearInterval(progressInterval);
+                    cameraUploadProgress.style.display = 'none';
+                    alert('Server error. Status: ' + response.status);
+                }
+                
+            } catch (error) {
+                cameraUploadProgress.style.display = 'none';
+                alert('Error uploading photo: ' + error.message);
+                console.error('Upload error:', error);
+            }
+            
+            // Clean up blob
+            capturedBlob = null;
+        }
+        
+        // Close camera modal
+        function closeCameraModal() {
+            cameraModal.style.display = 'none';
+            
+            // Stop camera stream
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            // Reset preview
+            capturedImagePreview.style.display = 'none';
+            cameraFeed.style.display = 'none';
+            cameraPlaceholder.style.display = 'flex';
+            capturePhotoBtn.style.display = 'inline-block';
+            retakePhotoBtn.style.display = 'none';
+            usePhotoBtn.style.display = 'none';
+            cameraError.style.display = 'none';
+            uploadProgress.style.display = 'none';
+        }
+        
+        // Close buttons
+        if (closeCameraBtn) {
+            closeCameraBtn.addEventListener('click', closeCameraModal);
+        }
+        if (closeCameraBtn2) {
+            closeCameraBtn2.addEventListener('click', closeCameraModal);
+        }
+        
+        // Close modal when clicking outside
+        if (cameraModal) cameraModal.addEventListener('click', function(e) {
+            if (e.target === cameraModal) {
+                closeCameraModal();
+            }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
 </body>
 </html>

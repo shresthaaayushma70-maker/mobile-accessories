@@ -23,6 +23,15 @@ require_once "notification_service.php";
 $admin_id = $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION['username']);
 
+// Fetch admin user details for avatar display
+$admin_user_sql = "SELECT * FROM users WHERE id = ?";
+$admin_user_stmt = mysqli_prepare($conn, $admin_user_sql);
+mysqli_stmt_bind_param($admin_user_stmt, "i", $admin_id);
+mysqli_stmt_execute($admin_user_stmt);
+$admin_user_result = mysqli_stmt_get_result($admin_user_stmt);
+$admin_user = mysqli_fetch_assoc($admin_user_result);
+mysqli_stmt_close($admin_user_stmt);
+
 // Handle status update via AJAX
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update_status') {
     $order_id = (int)$_POST['order_id'];
@@ -346,6 +355,33 @@ $all_statuses = ['Order Placed', 'Confirmed', 'Processing', 'Packing', 'Out for 
             border-radius: 5px;
             margin-bottom: 20px;
         }
+        
+        /* Avatar Styles */
+        .avatar-sm { width: 32px; height: 32px; }
+        .avatar-md { width: 48px; height: 48px; }
+        .avatar-lg { width: 64px; height: 64px; }
+        .avatar-xl { width: 80px; height: 80px; }
+        
+        .avatar-sm,
+        .avatar-md,
+        .avatar-lg,
+        .avatar-xl {
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e0e0e0;
+            display: block;
+        }
+        
+        .avatar-default {
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -358,7 +394,7 @@ $all_statuses = ['Order Placed', 'Confirmed', 'Processing', 'Packing', 'Out for 
         </div>
         <div class="navbar-links">
             <a href="admin_dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-            <a href="profile.php"><i class="fas fa-user"></i> Profile</a>
+            <a href="profile.php" style="display: flex; align-items: center; gap: 5px;"><?php echo get_user_avatar_html($admin_user, 'sm'); ?> Profile</a>
             <form action="logout.php" method="POST" style="margin: 0; display: inline;">
                 <button type="submit" style="background: none; border: none; color: white; cursor: pointer; text-decoration: none;">
                     <i class="fas fa-sign-out-alt"></i> Logout

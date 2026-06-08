@@ -13,6 +13,15 @@ $user_id = $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION['username']);
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
+// Fetch user details for avatar display
+$user_sql = "SELECT * FROM users WHERE id = ?";
+$user_stmt = mysqli_prepare($conn, $user_sql);
+mysqli_stmt_bind_param($user_stmt, "i", $user_id);
+mysqli_stmt_execute($user_stmt);
+$user_result = mysqli_stmt_get_result($user_stmt);
+$user = mysqli_fetch_assoc($user_result);
+mysqli_stmt_close($user_stmt);
+
 // Get notifications
 $unread_count = get_unread_notifications_count($conn, $user_id);
 $recent_notifications = get_user_notifications($conn, $user_id, 5, 0);
@@ -405,6 +414,33 @@ $total_orders = array_sum($status_counts);
             transform: translateY(-2px);
             box-shadow: 0 8px 16px rgba(44, 90, 160, 0.3);
         }
+        
+        /* Avatar Styles */
+        .avatar-sm { width: 32px; height: 32px; }
+        .avatar-md { width: 48px; height: 48px; }
+        .avatar-lg { width: 64px; height: 64px; }
+        .avatar-xl { width: 80px; height: 80px; }
+        
+        .avatar-sm,
+        .avatar-md,
+        .avatar-lg,
+        .avatar-xl {
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e0e0e0;
+            display: block;
+        }
+        
+        .avatar-default {
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -421,7 +457,7 @@ $total_orders = array_sum($status_counts);
                 <?php endif; ?>
             </a>
             <a href="profile.php" title="Profile">
-                <i class="fas fa-user"></i>
+                <?php echo get_user_avatar_html($user, 'sm'); ?>
             </a>
         </div>
     </div>
