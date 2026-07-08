@@ -551,19 +551,14 @@ $total_orders = array_sum($status_counts);
                                     <!-- No OTP for this order -->
                                 <?php endif; ?>
                             </div>
-                            <?php if (!$is_admin): ?>
-                                <?php if ($otp_status && $otp_status !== 'verified'): ?>
-                                    <div class="order-otp-actions" style="margin-top:8px;">
-                                        <label for="otp-method-<?php echo $order['id']; ?>">Send via:</label>
-                                        <select id="otp-method-<?php echo $order['id']; ?>" class="otp-method-select">
-                                            <option value="email">Email</option>
-                                            <option value="sms">SMS</option>
-                                            <option value="whatsapp">WhatsApp</option>
-                                        </select>
-                                        <button class="btn btn-sm btn-primary btn-send-otp" data-order-id="<?php echo $order['id']; ?>">Send OTP</button>
-                                        <span class="otp-send-status" id="otp-send-status-<?php echo $order['id']; ?>" style="margin-left:8px;"></span>
-                                    </div>
-                                <?php endif; ?>
+                            <?php if (!$is_admin && $otp_status && $otp_status !== 'verified'): ?>
+                                <div class="order-otp-actions" style="margin-top:8px;">
+                                    <span class="text-muted">The delivery OTP will be emailed to your registered address.</span>
+                                </div>
+                            <?php elseif ($is_admin && $otp_status && $otp_status !== 'verified'): ?>
+                                <div class="order-otp-actions" style="margin-top:8px;">
+                                    <a class="btn btn-sm btn-outline-primary" href="admin_otp_manage.php">Manage OTP</a>
+                                </div>
                             <?php endif; ?>
 
                             <div class="order-details">
@@ -588,6 +583,14 @@ $total_orders = array_sum($status_counts);
                                 <div class="order-details-row">
                                     <span class="order-details-label">City:</span>
                                     <span class="order-details-value"><?php echo htmlspecialchars($order['city'] ?? 'Not specified'); ?></span>
+                                </div>
+                                <div class="order-details-row">
+                                    <span class="order-details-label">Delivery Date:</span>
+                                    <span class="order-details-value"><?php echo !empty($order['delivered_at']) ? date('M d, Y', strtotime($order['delivered_at'])) : 'Pending'; ?></span>
+                                </div>
+                                <div class="order-details-row">
+                                    <span class="order-details-label">Delivery Time:</span>
+                                    <span class="order-details-value"><?php echo !empty($order['delivered_at']) ? date('H:i', strtotime($order['delivered_at'])) : 'Pending'; ?></span>
                                 </div>
                                 <?php if ($is_admin && isset($order['username'])): ?>
                                     <div class="order-details-row">
@@ -648,43 +651,6 @@ $total_orders = array_sum($status_counts);
 
         // Poll every 30 seconds
         setInterval(checkOrderUpdates, 30000);
-    </script>
-    <script>
-        // OTP send handler
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.classList.contains('btn-send-otp')) {
-                var orderId = e.target.getAttribute('data-order-id');
-                var select = document.getElementById('otp-method-' + orderId);
-                var method = select ? select.value : 'email';
-                var statusEl = document.getElementById('otp-send-status-' + orderId);
-                statusEl.textContent = 'Sending...';
-
-                var formData = new FormData();
-                formData.append('order_id', orderId);
-                formData.append('method', method);
-
-                fetch('send_delivery_otp.php', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                }).then(function(resp) { return resp.json(); })
-                .then(function(data) {
-                    if (data.success) {
-                        statusEl.textContent = data.message;
-                        // Update badge if present
-                        var card = document.querySelector('.order-card[data-order-id="' + orderId + '"]');
-                        if (card) {
-                            var badge = card.querySelector('.order-otp-status');
-                            if (badge) badge.innerHTML = '<span class="badge badge-info">OTP Sent</span>';
-                        }
-                    } else {
-                        statusEl.textContent = data.message || 'Send failed';
-                    }
-                }).catch(function(err) {
-                    statusEl.textContent = 'Error sending OTP';
-                });
-            }
-        });
     </script>
 
     <?php mysqli_close($conn); ?>

@@ -71,10 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $customer_name = sanitize_input($_POST['customer_name']);
     $customer_email = sanitize_input($_POST['customer_email']);
     $customer_phone = sanitize_input($_POST['customer_phone']);
-    $otp_method = isset($_POST['otp_delivery_method']) ? strtolower(sanitize_input($_POST['otp_delivery_method'])) : 'email';
-    if (!in_array($otp_method, ['email', 'sms', 'whatsapp'], true)) {
-        $otp_method = 'email';
-    }
     $street = sanitize_input($_POST['street']);
     $city = sanitize_input($_POST['city']);
     $state = sanitize_input($_POST['state']);
@@ -127,21 +123,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 create_notification($conn, $user_id, $order_id, 'order_placed', "Order Placed!", "Your order #" . $order_number . " has been placed successfully. We will start processing it soon.", "track_order.php?order_id=" . $order_id);
                 
                 // Insert first status history entry
-                $history_stmt = mysqli_prepare($conn, "INSERT INTO order_status_history (order_id, status, changed_by, notes) VALUES (?, ?, ?, ?)");
+                $history_stmt = mysqli_prepare($conn, "INSERT INTO order_status_history (order_id, status, changed_by, note) VALUES (?, ?, ?, ?)");
                 $status_text = "Order Placed";
                 $changed_by = $user_id;
                 $note = "Order created by customer";
-                mysqli_stmt_bind_param($history_stmt, "iiss", $order_id, $status_text, $changed_by, $note);
+                mysqli_stmt_bind_param($history_stmt, "isis", $order_id, $status_text, $changed_by, $note);
                 mysqli_stmt_execute($history_stmt);
 
-                // Generate and send the delivery OTP immediately after checkout using the chosen delivery method.
+                // Generate and send the delivery OTP immediately after checkout to the customer's registered email.
                 $otp_result = generate_delivery_otp($conn, $order_id, $user_id, null, true);
                 if (is_array($otp_result) && !empty($otp_result['otp_id'])) {
-                    $otp_sent = send_delivery_otp($conn, $otp_result['otp_id'], $otp_method);
+                    $otp_sent = send_delivery_otp($conn, $otp_result['otp_id'], 'email');
                     if ($otp_sent) {
-                        $success_msg = "Order placed successfully! Order #" . $order_number . " and delivery OTP sent via " . strtoupper($otp_method) . ".";
+                        $success_msg = "Order placed successfully! Order #" . $order_number . " and the delivery OTP has been emailed to you.";
                     } else {
-                        $success_msg = "Order placed successfully! Order #" . $order_number . " and delivery OTP prepared. Please use the resend option if needed.";
+                        $success_msg = "Order placed successfully! Order #" . $order_number . " but the delivery OTP could not be emailed immediately. An admin can resend it later.";
                     }
                 } else {
                     $success_msg = "Order placed successfully! Order #" . $order_number . " but OTP setup was skipped.";
@@ -408,13 +404,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
 
                 <div class="form-group">
-                    <label for="otp_delivery_method">Delivery OTP Method</label>
-                    <select class="form-control" name="otp_delivery_method" id="otp_delivery_method">
-                        <option value="email">Email</option>
-                        <option value="sms">SMS</option>
-                        <option value="whatsapp">WhatsApp</option>
-                    </select>
-                    <small class="text-muted">The OTP will be sent immediately after checkout using your selected method.</small>
+                    <label>Delivery OTP</label>
+                    <div class="alert alert-info mb-0">
+                        A one-time delivery OTP will be sent automatically to your registered email address after checkout.
+                    </div>
                 </div>
             </div>
 

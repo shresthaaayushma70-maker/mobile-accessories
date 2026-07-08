@@ -11,6 +11,16 @@ define('DB_USERNAME', 'root');
 define('DB_PASSWORD', '');
 define('DB_NAME', 'Mproject');
 
+// Email / OTP configuration
+// Replace the placeholder values below with your real Gmail address and Google App Password.
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'shresthaaayushma70@gmail.com');
+define('SMTP_PASS', 'hheeyloagtwgzmxu');
+define('SMTP_SECURE', 'tls');
+define('MAIL_FROM', 'shresthaaayushma70@gmail.com');
+define('MAIL_FROM_NAME', 'Bazario');
+
 // Create database connection (use TCP host and explicit port)
 $conn = @mysqli_connect(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME, DB_PORT);
 

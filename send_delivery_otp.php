@@ -12,7 +12,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 
 $user_id = $_SESSION['user_id'];
 $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
-$method = isset($_POST['method']) ? $_POST['method'] : 'email';
+$method = 'email';
 
 if ($order_id <= 0) {
     echo json_encode(['success' => false, 'message' => 'Invalid order']);
@@ -41,6 +41,24 @@ mysqli_stmt_execute($stmt);
 $res = mysqli_stmt_get_result($stmt);
 $otp_row = mysqli_fetch_assoc($res);
 mysqli_stmt_close($stmt);
+
+if (!$otp_row || $otp_row['status'] === 'expired' || ($otp_row['expires_at'] && strtotime($otp_row['expires_at']) < time())) {
+    mysqli_query($conn, "DELETE FROM delivery_otps WHERE order_id = {$order_id}");
+    $otp_row = null;
+    $newOtp = generate_delivery_otp($conn, $order_id, $user_id, null, false);
+    if ($newOtp === false) {
+        echo json_encode(['success' => false, 'message' => 'OTP record not found and could not be regenerated. Contact support.']);
+        exit;
+    }
+
+    $sql = "SELECT * FROM delivery_otps WHERE order_id = ? LIMIT 1";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, 'i', $order_id);
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    $otp_row = mysqli_fetch_assoc($res);
+    mysqli_stmt_close($stmt);
+}
 
 if (!$otp_row) {
     echo json_encode(['success' => false, 'message' => 'OTP record not found. Contact support.']);
