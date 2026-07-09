@@ -1,7 +1,8 @@
 <?php
 require_once "includes/admin_check.php";
 require_once "config.php";
-require_once "notification_service.php";
+require_once __DIR__ . '/includes/notification_service.php';
+require_once __DIR__ . '/includes/delivery_otp_service.php';
 
 // Admin endpoint to resend or regenerate OTP for an order
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

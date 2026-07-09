@@ -33,7 +33,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 }
 
 require_once "config.php";
-require_once "notification_service.php";
+require_once __DIR__ . '/includes/notification_service.php';
 
 $username = htmlspecialchars($_SESSION['username']);
 $user_id = $_SESSION['user_id'];
@@ -73,7 +73,7 @@ while ($row = $result->fetch_assoc()) {
     <title>Shop - Bazario</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/BAZARIO_STYLES.css">
+    <link rel="stylesheet" href="BAZARIO_STYLES.css">
     <style>
         * {
             margin: 0;

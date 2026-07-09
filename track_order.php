@@ -40,7 +40,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 }
 
 require_once "config.php";
-require_once "notification_service.php";
+require_once __DIR__ . '/includes/notification_service.php';
 
 $user_id = $_SESSION['user_id'];
 $order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;

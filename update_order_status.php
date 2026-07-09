@@ -8,7 +8,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true ||
 }
 
 require_once "config.php";
-require_once "notification_service.php";
+require_once __DIR__ . '/includes/notification_service.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $order_id = (int)$_POST['order_id'];

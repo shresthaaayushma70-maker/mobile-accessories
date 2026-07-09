@@ -2,6 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once "config.php";
 require_once "includes/notification_service.php";
+require_once "includes/delivery_otp_service.php";
 
 // Only logged in users can request sending OTP to their selected method
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {

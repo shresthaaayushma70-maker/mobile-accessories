@@ -2,6 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once "config.php";
 require_once "includes/notification_service.php";
+require_once "includes/delivery_otp_service.php";
 
 $message = '';
 $isSuccess = false;

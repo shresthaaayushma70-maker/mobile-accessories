@@ -15,7 +15,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 }
 
 require_once "config.php";
-require_once "notification_service.php";
+require_once __DIR__ . '/includes/notification_service.php';
 
 $user_id = $_SESSION['user_id'];
 $success_msg = '';
