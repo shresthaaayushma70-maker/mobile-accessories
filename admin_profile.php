@@ -104,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 mysqli_stmt_bind_param($stmt, $types, ...$params);
                 if (mysqli_stmt_execute($stmt)) {
+                    create_notification($conn, $admin_id, 0, 'profile_updated', 'Profile Updated', 'Your admin profile was updated successfully.', 'admin_profile.php');
                     $success_msg = "Profile updated successfully!";
                     
                     // Refresh admin data

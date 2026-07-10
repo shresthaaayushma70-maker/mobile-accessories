@@ -1,31 +1,44 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    if (session_status() === PHP_SESSION_NONE) { session_start(); }
-}
+require_once 'config.php';
+require_once __DIR__ . '/includes/notification_service.php';
+require_once __DIR__ . '/includes/user_common.php';
+require_once __DIR__ . '/components/user_layout.php';
 
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header("Location: minor.php");
+ensure_logged_in_user();
+
+$context = get_current_user_context($conn);
+$user_id = $context['user_id'];
+$username = $context['username'];
+$is_admin = $context['is_admin'];
+$user = $context['user'];
+$unread_count = $context['unread_count'];
+$last_notification_at = $context['last_notification_at'];
+
+if (isset($_GET['check_updates']) && $_GET['check_updates'] == 1) {
+    $unread_count = get_unread_notifications_count($conn, $user_id);
+    $last_notification_at = null;
+    $sql_last = "SELECT MAX(created_at) as last_notif FROM notifications WHERE user_id = ?";
+    $stmt_last = mysqli_prepare($conn, $sql_last);
+    if ($stmt_last) {
+        mysqli_stmt_bind_param($stmt_last, "i", $user_id);
+        mysqli_stmt_execute($stmt_last);
+        $res_last = mysqli_stmt_get_result($stmt_last);
+        $row_last = mysqli_fetch_assoc($res_last);
+        $last_notification_at = $row_last['last_notif'];
+        mysqli_stmt_close($stmt_last);
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'notification_count' => intval($unread_count),
+        'last_notification_at' => $last_notification_at
+    ]);
+    mysqli_close($conn);
     exit;
 }
 
-require_once "config.php";
-require_once __DIR__ . '/includes/notification_service.php';
-
-$user_id = $_SESSION['user_id'];
-$username = htmlspecialchars($_SESSION['username']);
-$is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
-
-// Fetch user details for avatar display
-$user_sql = "SELECT * FROM users WHERE id = ?";
-$user_stmt = mysqli_prepare($conn, $user_sql);
-mysqli_stmt_bind_param($user_stmt, "i", $user_id);
-mysqli_stmt_execute($user_stmt);
-$user_result = mysqli_stmt_get_result($user_stmt);
-$user = mysqli_fetch_assoc($user_result);
-mysqli_stmt_close($user_stmt);
-
 // Get notifications
-$unread_count = get_unread_notifications_count($conn, $user_id);
 $recent_notifications = get_user_notifications($conn, $user_id, 5, 0);
 
 // Get status filter from query string
@@ -141,6 +154,11 @@ $total_orders = array_sum($status_counts);
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+            width: 100%;
+            min-height: 64px;
         }
 
         .navbar-brand-text {
@@ -187,11 +205,12 @@ $total_orders = array_sum($status_counts);
         .sidebar {
             width: 250px;
             background: #001a33;
-            min-height: calc(100vh - 60px);
+            min-height: calc(100vh - 64px);
             padding: 20px 0;
             position: fixed;
             left: 0;
-            top: 60px;
+            top: 64px;
+            z-index: 900;
             overflow-y: auto;
             box-shadow: 2px 0 8px rgba(0,0,0,0.1);
         }
@@ -215,6 +234,7 @@ $total_orders = array_sum($status_counts);
             margin-left: 250px;
             padding: 30px;
             width: calc(100% - 250px);
+            padding-top: 24px;
         }
 
         .page-header {
@@ -630,27 +650,41 @@ $total_orders = array_sum($status_counts);
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         // Auto-submit search
-        document.getElementById('searchInput').addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('searchForm').submit();
-            }
-        });
+        const searchInput = document.getElementById('searchInput');
+        const searchForm = document.getElementById('searchForm');
+        if (searchInput && searchForm) {
+            searchInput.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    searchForm.submit();
+                }
+            });
+        }
+
+        let lastNotificationCount = <?php echo (int)$unread_count; ?>;
+        let lastNotificationAt = <?php echo json_encode($last_notification_at); ?>;
 
         // Real-time polling for order updates
         function checkOrderUpdates() {
-            fetch('api_order_updates.php?last_check=' + Math.floor(Date.now() / 1000))
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.updated_orders && data.updated_orders.length > 0) {
-                        // Refresh the page to show updated orders
-                        location.reload();
-                    }
-                })
-                .catch(error => console.log('Update check error:', error));
+            fetch('orders_new.php?check_updates=1&ts=' + Date.now(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                cache: 'no-store'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data || !data.success) return;
+                const newCount = Number(data.notification_count || 0);
+                const latestAt = data.last_notification_at || null;
+                if ((latestAt && (!lastNotificationAt || latestAt > lastNotificationAt)) || newCount > lastNotificationCount) {
+                    lastNotificationCount = newCount;
+                    lastNotificationAt = latestAt;
+                    location.reload();
+                }
+            })
+            .catch(error => console.log('Update check error:', error));
         }
 
-        // Poll every 30 seconds
-        setInterval(checkOrderUpdates, 30000);
+        // Poll every 10 seconds
+        setInterval(checkOrderUpdates, 10000);
     </script>
 
     <?php mysqli_close($conn); ?>

@@ -35,10 +35,13 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 }
 
 require_once "config.php";
+require_once __DIR__ . '/includes/notification_service.php';
+require_once __DIR__ . '/components/user_layout.php';
 
 $user_id = $_SESSION['user_id'];
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 $result = mysqli_query($conn, "SELECT * FROM users WHERE id = $user_id");
+$unread_count = get_unread_notifications_count($conn, $user_id);
 
 if (mysqli_num_rows($result) == 0) {
     die("User not found");
@@ -117,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     if (mysqli_stmt_execute($stmt)) {
                         log_activity($conn, $user_id, "Profile Update", "User updated profile and password");
+                        create_notification($conn, $user_id, 0, 'password_changed', 'Password Changed', 'Your password was changed successfully.', 'profile.php');
                         $success_msg = "Profile and password updated successfully!";
                         $_SESSION['username'] = $username;
                         
@@ -145,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     if (mysqli_stmt_execute($stmt)) {
                         log_activity($conn, $user_id, "Profile Update", "User updated profile");
+                        create_notification($conn, $user_id, 0, 'profile_updated', 'Profile Updated', 'Your profile information was updated successfully.', 'profile.php');
                         $success_msg = "Profile updated successfully!";
                         $_SESSION['username'] = $username;
                         
@@ -277,16 +282,101 @@ mysqli_close($conn);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            .navbar-top {
+            background: linear-gradient(135deg, #001a33 0%, #003366 100%);
             color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 24px;
-            font-weight: 700;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 15px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+            min-height: 64px;
         }
-        
+
+        .navbar-brand-text {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .nav-menu li {
+            list-style: none;
+        }
+
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            color: #ffd700;
+        }
+
+        .navbar-icons {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .navbar-icons a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            position: relative;
+        }
+
+        .navbar-icons a:hover {
+            color: #ffd700;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -7px;
+            right: -8px;
+            background: #ff5a5f;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-top {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .nav-menu {
+                gap: 12px;
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .navbar-icons {
+                margin-left: auto;
+                width: auto;
+            }
+        }
+
         .container-main {
             display: flex;
             min-height: calc(100vh - 70px);
@@ -358,6 +448,7 @@ mysqli_close($conn);
             margin-left: 250px;
             padding: 30px;
             flex: 1;
+            padding-top: 24px;
         }
         
         .settings-container {
@@ -712,27 +803,9 @@ mysqli_close($conn);
             <i class="fas fa-mobile-alt"></i> Profile Settings
         </div>
     <?php else: ?>
-        <!-- Header and sidebar for regular users -->
-        <div class="header">
-            <i class="fas fa-mobile-alt"></i> Mobile Accessories
-        </div>
+        <?php echo render_user_navbar($user, $unread_count, 'navbar-top', 'BAZARIO', false, 'profile'); ?>
         <div class="container-main">
-            <div class="sidebar">
-                <a href="user_dashboard.php">
-                    <i class="fas fa-home"></i> Home
-                </a>
-                <a href="orders_new.php">
-                    <i class="fas fa-shopping-bag"></i> My Orders
-                </a>
-                <a href="profile.php">
-                    <i class="fas fa-user-circle"></i> Profile
-                </a>
-                <form action="logout.php" method="POST" style="margin: 0; padding: 0;">
-                    <button type="submit" class="sidebar-logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </form>
-            </div>
+            <?php echo render_user_sidebar('profile'); ?>
             <div class="content">
     <?php endif; ?>
     

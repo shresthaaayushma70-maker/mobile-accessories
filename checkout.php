@@ -120,8 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Log activity
                 log_activity($conn, $user_id, "Order Placed", "Order #" . $order_number . " placed for " . $product['name']);
                 
-                // Create Order Placed notification
+                // Create Order Placed notification for the customer and admins
                 create_notification($conn, $user_id, $order_id, 'order_placed', "Order Placed!", "Your order #" . $order_number . " has been placed successfully. We will start processing it soon.", "track_order.php?order_id=" . $order_id);
+                notify_admins($conn, $order_id, 'new_order', 'New Order Received', 'A new order #' . $order_number . ' has been placed.', 'admin_orders_manage.php');
                 
                 // Insert first status history entry
                 $history_stmt = mysqli_prepare($conn, "INSERT INTO order_status_history (order_id, status, changed_by, note) VALUES (?, ?, ?, ?)");

@@ -21,6 +21,30 @@ $user_id = $_SESSION['user_id'];
 $success_msg = '';
 $error_msg = '';
 
+if (isset($_GET['check_updates']) && $_GET['check_updates'] == 1) {
+    $unread_count = get_unread_notifications_count($conn, $user_id);
+    $last_notification_at = null;
+    $sql_last = "SELECT MAX(created_at) as last_notif FROM notifications WHERE user_id = ?";
+    $stmt_last = mysqli_prepare($conn, $sql_last);
+    if ($stmt_last) {
+        mysqli_stmt_bind_param($stmt_last, "i", $user_id);
+        mysqli_stmt_execute($stmt_last);
+        $res_last = mysqli_stmt_get_result($stmt_last);
+        $row_last = mysqli_fetch_assoc($res_last);
+        $last_notification_at = $row_last['last_notif'];
+        mysqli_stmt_close($stmt_last);
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'notification_count' => intval($unread_count),
+        'last_notification_at' => $last_notification_at
+    ]);
+    mysqli_close($conn);
+    exit;
+}
+
 // Fetch user details for avatar display
 $user_sql = "SELECT * FROM users WHERE id = ?";
 $user_stmt = mysqli_prepare($conn, $user_sql);
@@ -71,6 +95,18 @@ $preferences = get_notification_preferences($conn, $user_id);
 if (!$preferences) {
     create_default_preferences($conn, $user_id);
     $preferences = get_notification_preferences($conn, $user_id);
+}
+
+$last_notification_at = null;
+$sql_last = "SELECT MAX(created_at) as last_notif FROM notifications WHERE user_id = ?";
+$stmt_last = mysqli_prepare($conn, $sql_last);
+if ($stmt_last) {
+    mysqli_stmt_bind_param($stmt_last, "i", $user_id);
+    mysqli_stmt_execute($stmt_last);
+    $res_last = mysqli_stmt_get_result($stmt_last);
+    $row_last = mysqli_fetch_assoc($res_last);
+    $last_notification_at = $row_last['last_notif'];
+    mysqli_stmt_close($stmt_last);
 }
 ?>
 
@@ -406,14 +442,20 @@ if (!$preferences) {
                         <?php else: ?>
                             <?php foreach ($notifications as $notif): 
                                 $status = $notif['is_read'] ? 'read' : 'unread';
-                                $icon_class = 'fa-' . ($notif['icon_class'] ?? 'info-circle');
+                                $icon_class = $notif['icon_class'] ?? 'fa-info-circle';
                                 $icon_bg_color = [
                                     'fa-box' => '#3498db',
+                                    'fa-shopping-cart' => '#2ecc71',
                                     'fa-check-circle' => '#27ae60',
                                     'fa-cogs' => '#3498db',
                                     'fa-boxes' => '#e67e22',
                                     'fa-truck' => '#e67e22',
-                                    'fa-times-circle' => '#e74c3c'
+                                    'fa-check-double' => '#27ae60',
+                                    'fa-envelope' => '#9b59b6',
+                                    'fa-shield-alt' => '#16a085',
+                                    'fa-sync-alt' => '#f39c12',
+                                    'fa-times-circle' => '#e74c3c',
+                                    'fa-info-circle' => '#001a33'
                                 ];
                                 $bg_color = $icon_bg_color[$icon_class] ?? '#001a33';
                             ?>
@@ -562,6 +604,53 @@ if (!$preferences) {
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
+        let lastNotificationCount = <?php echo (int)$unread_count; ?>;
+        let lastNotificationAt = <?php echo json_encode($last_notification_at); ?>;
+        let updateCheckInterval = null;
+
+        function showUpdateNotification(message) {
+            if (document.getElementById('live-update-banner')) {
+                return;
+            }
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'live-update-banner';
+            alertDiv.className = 'alert alert-info alert-dismissible fade show';
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '0';
+            alertDiv.style.left = '0';
+            alertDiv.style.right = '0';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.style.borderRadius = '0';
+            alertDiv.style.margin = '0';
+            alertDiv.innerHTML = `<div class="container"><i class="fas fa-bell"></i> <strong>Update!</strong> ${message}<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>`;
+            document.body.insertBefore(alertDiv, document.body.firstChild);
+            setTimeout(() => {
+                if (alertDiv.parentElement) {
+                    alertDiv.remove();
+                }
+            }, 4000);
+        }
+
+        function checkForNotifications() {
+            fetch('notifications.php?check_updates=1&ts=' + Date.now(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                cache: 'no-store'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data || !data.success) return;
+                const newCount = Number(data.notification_count || 0);
+                const latestAt = data.last_notification_at || null;
+                if ((latestAt && (!lastNotificationAt || latestAt > lastNotificationAt)) || newCount > lastNotificationCount) {
+                    lastNotificationCount = newCount;
+                    lastNotificationAt = latestAt;
+                    showUpdateNotification('You have a new notification. Refreshing now…');
+                    setTimeout(() => location.reload(), 1200);
+                }
+            })
+            .catch(error => console.log('Notification check error:', error));
+        }
+
         // Tab switching
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', function() {
@@ -641,6 +730,17 @@ if (!$preferences) {
             // Open order tracking page or details
             console.log('Opening notification:', notificationId);
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkForNotifications();
+            updateCheckInterval = setInterval(checkForNotifications, 10000);
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (updateCheckInterval) {
+                clearInterval(updateCheckInterval);
+            }
+        });
     </script>
 </body>
 </html>

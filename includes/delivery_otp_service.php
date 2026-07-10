@@ -79,6 +79,9 @@ function send_delivery_otp($conn, $otp_id, $method = 'email') {
         mysqli_stmt_bind_param($update_stmt, 'si', $method, $otp_id);
         mysqli_stmt_execute($update_stmt);
         mysqli_stmt_close($update_stmt);
+
+        $order_id = (int)$otp['order_id'];
+        create_notification($conn, (int)$otp['user_id'], $order_id, 'delivery_otp_sent', 'Delivery OTP Sent', 'A delivery OTP has been sent to your email for order #' . $otp['order_number'] . '.', 'track_order.php?order_id=' . $order_id);
         return true;
     }
 
@@ -129,6 +132,8 @@ function verify_delivery_otp($conn, $order_id, $entered_otp, $ip = null) {
         mysqli_query($conn, "UPDATE orders SET status = 'Delivered', delivered_at = NOW() WHERE id = $order_id");
         $ip_value = $ip ?? '';
         mysqli_query($conn, "INSERT INTO otp_verification_logs (otp_id, order_id, user_id, attempt_time, ip_address, success, note) VALUES ({$otp['id']}, $order_id, {$otp['user_id']}, NOW(), '$ip_value', 1, 'Verified successfully')");
+        create_notification($conn, (int)$otp['user_id'], $order_id, 'delivery_otp_verified', 'Delivery OTP Verified', 'Your delivery OTP was verified successfully for order #' . $order_id . '.', 'track_order.php?order_id=' . $order_id);
+        notify_admins($conn, $order_id, 'delivery_otp_verified', 'Delivery OTP Verified', 'A customer verified the delivery OTP for order #' . $order_id . '.', 'admin_orders_manage.php');
         return ['success' => true, 'message' => 'OTP verified successfully. Order marked as delivered.'];
     }
 

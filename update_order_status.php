@@ -38,6 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Use the notification-aware status update function
     $admin_id = $_SESSION['user_id'];
     $result = update_order_status($conn, $order_id, $new_status, $admin_id, $notes);
+    if ($result['success']) {
+        $order_user_query = mysqli_query($conn, "SELECT user_id FROM orders WHERE id = $order_id LIMIT 1");
+        if ($order_user_query && $order_user = mysqli_fetch_assoc($order_user_query)) {
+            create_notification($conn, (int)$order_user['user_id'], $order_id, 'order_status_updated', 'Order Status Updated', 'Your order #' . $order_id . ' status was updated to ' . $new_status . '.', 'track_order.php?order_id=' . $order_id);
+        }
+    }
     
     if ($result['success']) {
         header("Location: orders.php?success=status_updated");

@@ -1,10 +1,18 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
-// Check if user is logged in
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header("location: minor.php");
-    exit;
-}
+require_once 'config.php';
+require_once __DIR__ . '/includes/notification_service.php';
+require_once __DIR__ . '/includes/user_common.php';
+require_once __DIR__ . '/components/user_layout.php';
+
+
+ensure_logged_in_user();
+
+$context = get_current_user_context($conn);
+$user_id = $context['user_id'];
+$username = $context['username'];
+$user = $context['user'];
+$unread_count = $context['unread_count'];
+$last_notification_at = $context['last_notification_at'];
 
 // Prevent admin from accessing customer shop
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
@@ -32,23 +40,31 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     ");
 }
 
-require_once "config.php";
-require_once __DIR__ . '/includes/notification_service.php';
+if (isset($_GET['check_updates']) && $_GET['check_updates'] == 1) {
+    $unread_count = get_unread_notifications_count($conn, $user_id);
+    $last_notification_at = null;
+    $sql_last = "SELECT MAX(created_at) as last_notif FROM notifications WHERE user_id = ?";
+    $stmt_last = mysqli_prepare($conn, $sql_last);
+    if ($stmt_last) {
+        mysqli_stmt_bind_param($stmt_last, "i", $user_id);
+        mysqli_stmt_execute($stmt_last);
+        $res_last = mysqli_stmt_get_result($stmt_last);
+        $row_last = mysqli_fetch_assoc($res_last);
+        $last_notification_at = $row_last['last_notif'];
+        mysqli_stmt_close($stmt_last);
+    }
 
-$username = htmlspecialchars($_SESSION['username']);
-$user_id = $_SESSION['user_id'];
-
-// Fetch user details
-$sql = "SELECT * FROM users WHERE id = ?";
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$user = mysqli_fetch_assoc($result);
-mysqli_stmt_close($stmt);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'notification_count' => intval($unread_count),
+        'last_notification_at' => $last_notification_at
+    ]);
+    mysqli_close($conn);
+    exit;
+}
 
 // Get notifications
-$unread_count = get_unread_notifications_count($conn, $user_id);
 $recent_notifications = get_user_notifications($conn, $user_id, 5, 0);
 
 // Fetch all products
@@ -73,7 +89,7 @@ while ($row = $result->fetch_assoc()) {
     <title>Shop - Bazario</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="BAZARIO_STYLES.css">
+    <link rel="stylesheet" href="assets/css/BAZARIO_STYLES.css">
     <style>
         * {
             margin: 0;
@@ -95,6 +111,11 @@ while ($row = $result->fetch_assoc()) {
             font-size: 24px;
             font-weight: 700;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+            width: 100%;
+            min-height: 64px;
         }
         
         .container-main {
@@ -108,7 +129,10 @@ while ($row = $result->fetch_assoc()) {
             padding: 20px 0;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             position: fixed;
-            height: calc(100vh - 70px);
+            top: 64px;
+            left: 0;
+            height: calc(100vh - 64px);
+            z-index: 900;
             overflow-y: auto;
         }
         
@@ -140,9 +164,10 @@ while ($row = $result->fetch_assoc()) {
         
         .content {
             margin-left: 250px;
-            padding: 0;
+            padding: 30px;
             flex: 1;
             background: #f8f9fa;
+            padding-top: 24px;
         }
         
         .sidebar-logout-btn {
@@ -417,6 +442,7 @@ while ($row = $result->fetch_assoc()) {
 </head>
 <body>
     <!-- Header -->
+
     <div class="navbar">
         <div style="display: flex; align-items: center; gap: 15px; width: 100%;">
             <i class="fas fa-shopping-bag" style="font-size: 28px;"></i>
@@ -467,7 +493,7 @@ while ($row = $result->fetch_assoc()) {
                 </a>
             </div>
         </div>
-    </div>
+    </div>   
 
     <!-- Main Container with Sidebar -->
     <div class="container-main">
@@ -578,6 +604,40 @@ while ($row = $result->fetch_assoc()) {
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        let lastNotificationCount = <?php echo (int)$unread_count; ?>;
+        let lastNotificationAt = <?php echo json_encode($last_notification_at); ?>;
+        let updateCheckInterval = null;
+
+        function checkForShopUpdates() {
+            fetch('user_dashboard.php?check_updates=1&ts=' + Date.now(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                cache: 'no-store'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data || !data.success) return;
+                const newCount = Number(data.notification_count || 0);
+                const latestAt = data.last_notification_at || null;
+                if ((latestAt && (!lastNotificationAt || latestAt > lastNotificationAt)) || newCount > lastNotificationCount) {
+                    lastNotificationCount = newCount;
+                    lastNotificationAt = latestAt;
+                    location.reload();
+                }
+            })
+            .catch(error => console.log('Shop update check error:', error));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCheckInterval = setInterval(checkForShopUpdates, 10000);
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (updateCheckInterval) {
+                clearInterval(updateCheckInterval);
+            }
+        });
+    </script>
 </body>
 </html>
 

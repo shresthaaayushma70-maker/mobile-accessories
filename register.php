@@ -101,6 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
             mysqli_stmt_bind_param($stmt, "sssss", $username, $email, $phone, $dob, $password);
             
             if (mysqli_stmt_execute($stmt)) {
+                $new_user_id = mysqli_insert_id($conn);
+                notify_admins($conn, 0, 'new_user', 'New User Registered', 'A new user account was created.', 'admin_dashboard.php');
                 $success_msg = "Registration successful! Redirecting to login...";
                 header("refresh:2;url=minor.php");
             } else {
