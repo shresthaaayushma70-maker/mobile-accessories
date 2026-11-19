@@ -265,15 +265,10 @@ while ($row = $result->fetch_assoc()) {
             opacity: 0.5;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css?v=4">
 </head>
 <body>
-    <div class="navbar">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <i class="fas fa-shopping-bag" style="font-size: 28px;"></i>
-            <span class="navbar-brand" style="margin: 0;">BAZARIO</span>
-            <span style="opacity: 0.9; font-size: 12px; margin-left: auto;">Admin Dashboard</span>
-        </div>
-    </div>
+    <?php $adminBasePath = ''; require __DIR__ . '/components/admin_heading_bar.php'; ?>
 
     <div class="container-main">
         <div class="sidebar">
@@ -286,6 +281,9 @@ while ($row = $result->fetch_assoc()) {
             <a href="admin_orders_manage.php">
                 <i class="fas fa-shopping-bag"></i> Orders Management
             </a>
+            <a href="admin_announcements.php">
+                <i class="fas fa-bullhorn"></i> Announcements
+            </a>
             <a href="admin_profile.php">
                 <i class="fas fa-user-circle"></i> Admin Profile
             </a>
@@ -295,7 +293,7 @@ while ($row = $result->fetch_assoc()) {
                 <p class="text-muted" style="margin: 0; font-size: 12px;">
                     <span class="admin-badge">ADMIN</span>
                 </p>
-                <form action="logout.php" method="POST">
+                <form action="auth/logout.php" method="POST">
                     <button type="submit" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>

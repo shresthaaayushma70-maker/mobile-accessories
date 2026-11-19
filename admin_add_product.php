@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $category = sanitize_input($_POST['category']);
     $price = floatval($_POST['price']);
     $quantity = intval($_POST['quantity']);
-    $description = sanitize_input($_POST['description']);
+    $description = trim((string) ($_POST['description'] ?? ''));
     
     // Validate inputs
     if (empty($name)) {
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     VALUES (?, ?, ?, ?, ?, ?)";
             
             if ($stmt = mysqli_prepare($conn, $sql)) {
-                mysqli_stmt_bind_param($stmt, "ssidis", $name, $category, $price, $quantity, $description, $upload_path);
+                mysqli_stmt_bind_param($stmt, "ssdiss", $name, $category, $price, $quantity, $description, $upload_path);
                 
                 if (mysqli_stmt_execute($stmt)) {
                     $success_msg = "Product added successfully!";
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .sidebar {
             width: 250px;
-            background: #2c3e50;
+            background: #001a33;
             padding: 20px 0;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             position: fixed;
@@ -115,8 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .sidebar a, .sidebar button {
             display: block;
             width: 100%;
-            color: #ecf0f1;
-            padding: 15px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            padding: 14px 20px;
             text-decoration: none;
             transition: all 0.3s;
             border-left: 4px solid transparent;
@@ -127,19 +127,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .sidebar a:hover, .sidebar button:hover {
-            background: #34495e;
-            border-left-color: #667eea;
-            padding-left: 30px;
+            background: #003366;
+            border-left-color: #3498db;
+            color: white;
+            padding-left: 24px;
         }
         
         .sidebar a i, .sidebar button i {
-            margin-right: 10px;
-            width: 20px;
+            margin-right: 12px;
+            width: 18px;
         }
         
         .sidebar a.active {
-            background: #34495e;
+            background: #003366;
             border-left-color: #667eea;
+            color: white;
+            font-weight: 600;
         }
         
         .content {
@@ -273,11 +276,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin-left: 10px;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css?v=4">
 </head>
 <body>
-    <div class="header">
-        <i class="fas fa-user-shield"></i> Admin Dashboard - Mobile Accessories
-    </div>
+    <?php $adminBasePath = ''; require __DIR__ . '/components/admin_heading_bar.php'; ?>
 
     <div class="container-main">
         <div class="sidebar">
@@ -290,6 +292,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <a href="admin_orders_manage.php">
                 <i class="fas fa-shopping-bag"></i> Orders Management
             </a>
+            <a href="admin_announcements.php">
+                <i class="fas fa-bullhorn"></i> Announcements
+            </a>
             <a href="admin_profile.php">
                 <i class="fas fa-user"></i> Profile
             </a>
@@ -299,7 +304,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <p class="text-muted" style="margin: 0; font-size: 12px;">
                     <span class="admin-badge">ADMIN</span>
                 </p>
-                <form action="logout.php" method="POST">
+                <form action="auth/logout.php" method="POST">
                     <button type="submit" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>

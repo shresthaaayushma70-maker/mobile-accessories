@@ -4,23 +4,33 @@
  * Contains database connection settings and helper functions
  */
 
-// Database credentials
-define('DB_SERVER', '127.0.0.1');
-define('DB_PORT', 3306);
-define('DB_USERNAME', 'root');
-define('DB_PASSWORD', '');
-define('DB_NAME', 'Mproject');
+// Load local secrets from ignored .env; process/server environment takes precedence.
+$localEnvFile = __DIR__ . DIRECTORY_SEPARATOR . '.env';
+if (is_file($localEnvFile)) {
+    $localEnv = @parse_ini_file($localEnvFile, false, INI_SCANNER_RAW);
+    if (is_array($localEnv)) {
+        foreach ($localEnv as $envName => $envValue) {
+            if (getenv($envName) === false && is_string($envValue)) {
+                putenv($envName . '=' . $envValue);
+                $_ENV[$envName] = $envValue;
+            }
+        }
+    }
+}
 
-// Email / OTP configuration
-// Replace the placeholder values below with your real Gmail address and Google App Password.
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'shresthaaayushma70@gmail.com');
-define('SMTP_PASS', 'hheeyloagtwgzmxu');
-define('SMTP_SECURE', 'tls');
-define('MAIL_FROM', 'shresthaaayushma70@gmail.com');
-define('MAIL_FROM_NAME', 'Bazario');
+define('DB_SERVER', getenv('DB_HOST') ?: '127.0.0.1');
+define('DB_PORT', (int)(getenv('DB_PORT') ?: 3306));
+define('DB_USERNAME', getenv('DB_USER') ?: 'root');
+define('DB_PASSWORD', getenv('DB_PASS') ?: '');
+define('DB_NAME', getenv('DB_NAME') ?: 'Mproject');
 
+if (!defined('SMTP_HOST')) define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
+if (!defined('SMTP_PORT')) define('SMTP_PORT', (int)(getenv('SMTP_PORT') ?: 587));
+if (!defined('SMTP_USERNAME')) define('SMTP_USERNAME', getenv('SMTP_USER') ?: '');
+if (!defined('SMTP_PASSWORD')) define('SMTP_PASSWORD', getenv('SMTP_PASS') ?: '');
+if (!defined('SMTP_SECURE')) define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'tls');
+if (!defined('MAIL_FROM')) define('MAIL_FROM', getenv('MAIL_FROM') ?: SMTP_USERNAME);
+if (!defined('MAIL_FROM_NAME')) define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'Bazario');
 // Create database connection (use TCP host and explicit port)
 $conn = @mysqli_connect(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME, DB_PORT);
 
@@ -89,6 +99,22 @@ function ensure_announcements_table($conn) {
     return true;
 }
 
+function ensure_order_status_history_table($conn) {
+    $table_sql = "CREATE TABLE IF NOT EXISTS order_status_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        changed_by INT NULL,
+        note TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_order_id (order_id),
+        INDEX idx_created_at (created_at),
+        CONSTRAINT fk_order_status_history_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+    return mysqli_query($conn, $table_sql) === true;
+}
+
 ensure_announcements_table($conn);
 
 // OTP configuration
@@ -105,14 +131,16 @@ if (!defined('OTP_ENC_KEY')) {
         define('OTP_ENC_KEY', 'please_change_this_to_a_secure_random_key');
     }
 }
-/**
- * Helper function to sanitize input
- */
-function sanitize_input($data) {
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data);
-    return $data;
+if (!function_exists('sanitize_input')) {
+    /**
+     * Helper function to sanitize input
+     */
+    function sanitize_input($data) {
+        $data = trim($data);
+        $data = stripslashes($data);
+        $data = htmlspecialchars($data);
+        return $data;
+    }
 }
 
 /**
@@ -286,15 +314,35 @@ function format_order_datetime($order, $format = 'M d, Y \a\t h:i A') {
 // PROFILE PICTURE MANAGEMENT FUNCTIONS
 // ========================================
 
+function ensure_profile_picture_column($conn) {
+    $column_check = mysqli_query($conn, "SHOW COLUMNS FROM users LIKE 'profile_picture'");
+    if (!$column_check) {
+        return false;
+    }
+
+    if (mysqli_num_rows($column_check) > 0) {
+        return true;
+    }
+
+    return mysqli_query($conn, 'ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) NULL') === true;
+}
+
 /**
  * Get profile picture path for a user
  * Returns the image path if exists, or null if no profile picture
  */
 function get_profile_picture_path($user) {
-    if (!empty($user['profile_picture']) && file_exists($user['profile_picture'])) {
-        return $user['profile_picture'];
+    if (empty($user['profile_picture'])) {
+        return null;
     }
-    return null;
+
+    $stored_path = str_replace('\\', '/', $user['profile_picture']);
+    if (strpos($stored_path, '..') !== false || preg_match('/^[A-Za-z]:/', $stored_path)) {
+        return null;
+    }
+
+    $filesystem_path = __DIR__ . '/' . ltrim($stored_path, '/');
+    return is_file($filesystem_path) ? $stored_path : null;
 }
 
 /**
@@ -302,35 +350,43 @@ function get_profile_picture_path($user) {
  */
 function validate_profile_picture($file) {
     $errors = [];
-    
-    // Check if file exists
-    if (!isset($file['tmp_name']) || empty($file['tmp_name'])) {
-        $errors[] = "No file uploaded";
+
+    if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+        $upload_error = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($upload_error === UPLOAD_ERR_INI_SIZE || $upload_error === UPLOAD_ERR_FORM_SIZE) {
+            $errors[] = 'The selected image is too large. Please choose a smaller image.';
+        } elseif ($upload_error === UPLOAD_ERR_NO_FILE) {
+            $errors[] = 'No file selected. Please choose a profile picture.';
+        } else {
+            $errors[] = 'Unable to receive the profile picture. Please try again.';
+        }
         return $errors;
     }
-    
-    // Check file size (max 5MB)
+
+    if (empty($file['tmp_name']) || !is_file($file['tmp_name']) || !is_readable($file['tmp_name'])) {
+        $errors[] = 'Unable to read the uploaded image. Please try again.';
+        return $errors;
+    }
+
     $max_size = 5 * 1024 * 1024;
-    if ($file['size'] > $max_size) {
-        $errors[] = "File size must be less than 5MB";
+    $actual_size = filesize($file['tmp_name']);
+    if ($actual_size === false || $actual_size > $max_size) {
+        $errors[] = 'The selected image is too large. Please choose an image under 5MB.';
     }
-    
-    // Check MIME type
-    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    $allowed_extensions = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+    $extension = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime_type = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-    
-    if (!in_array($mime_type, $allowed_types)) {
-        $errors[] = "Only JPG, PNG, and WEBP files are allowed";
+    $mime_type = $finfo ? finfo_file($finfo, $file['tmp_name']) : false;
+    if ($finfo) {
+        finfo_close($finfo);
     }
-    
-    // Verify it's actually an image
+
     $image_info = @getimagesize($file['tmp_name']);
-    if ($image_info === false) {
-        $errors[] = "File is not a valid image";
+    if (!isset($allowed_extensions[$extension]) || $mime_type !== $allowed_extensions[$extension] || $image_info === false || ($image_info['mime'] ?? '') !== $mime_type) {
+        $errors[] = 'Please upload a valid JPG, JPEG, PNG, or WEBP image.';
     }
-    
+
     return $errors;
 }
 
@@ -339,62 +395,70 @@ function validate_profile_picture($file) {
  * Upload and save profile picture
  */
 function upload_profile_picture($conn, $user_id, $file) {
-    // Validate file
     $validation_errors = validate_profile_picture($file);
     if (!empty($validation_errors)) {
         return ['success' => false, 'message' => implode(', ', $validation_errors)];
     }
-    
-    // Create uploads/profiles directory if needed
-    if (!is_dir('uploads/profiles')) {
-        mkdir('uploads/profiles', 0755, true);
+
+    if (!ensure_profile_picture_column($conn)) {
+        return ['success' => false, 'message' => 'Unable to prepare profile picture storage in the account database.'];
     }
-    
-    // Generate unique filename
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = 'user_' . $user_id . '_' . time() . '.' . strtolower($extension);
-    $upload_path = 'uploads/profiles/' . $filename;
-    
-    // Move uploaded file
-    if (!move_uploaded_file($file['tmp_name'], $upload_path)) {
-        return ['success' => false, 'message' => 'Failed to upload image. Check directory permissions.'];
+
+    $user_id = (int) $user_id;
+    $upload_dir = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'profiles';
+    if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true) && !is_dir($upload_dir)) {
+        return ['success' => false, 'message' => 'Unable to prepare the profile picture upload folder.'];
     }
-    
-    // Get old profile picture to delete
-    $old_pic_result = mysqli_query($conn, "SELECT profile_picture FROM users WHERE id = $user_id");
-    if ($old_pic_result && mysqli_num_rows($old_pic_result) > 0) {
-        $user_row = mysqli_fetch_assoc($old_pic_result);
-        $old_pic = $user_row['profile_picture'];
-        
-        // Delete old picture if it exists and is not default
-        if (!empty($old_pic) && file_exists($old_pic) && strpos($old_pic, 'uploads/profiles/') !== false) {
-            unlink($old_pic);
+
+    if (!is_writable($upload_dir)) {
+        return ['success' => false, 'message' => 'The profile picture folder is not writable by the server.'];
+    }
+
+    $user_stmt = mysqli_prepare($conn, 'SELECT profile_picture FROM users WHERE id = ?');
+    if (!$user_stmt) {
+        return ['success' => false, 'message' => 'Unable to load the account for this profile picture.'];
+    }
+
+    mysqli_stmt_bind_param($user_stmt, 'i', $user_id);
+    mysqli_stmt_execute($user_stmt);
+    $user_result = mysqli_stmt_get_result($user_stmt);
+    $user_row = $user_result ? mysqli_fetch_assoc($user_result) : null;
+    mysqli_stmt_close($user_stmt);
+    if (!$user_row) {
+        return ['success' => false, 'message' => 'The account for this profile picture was not found.'];
+    }
+
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $filename = 'user_' . $user_id . '_profile_' . bin2hex(random_bytes(8)) . '.' . $extension;
+    $filesystem_path = $upload_dir . DIRECTORY_SEPARATOR . $filename;
+    $stored_path = 'uploads/profiles/' . $filename;
+    if (!move_uploaded_file($file['tmp_name'], $filesystem_path)) {
+        return ['success' => false, 'message' => 'Unable to upload the profile picture. Please try again.'];
+    }
+
+    $update_stmt = mysqli_prepare($conn, 'UPDATE users SET profile_picture = ? WHERE id = ?');
+    if (!$update_stmt) {
+        @unlink($filesystem_path);
+        return ['success' => false, 'message' => 'Unable to save the profile picture to your account.'];
+    }
+
+    mysqli_stmt_bind_param($update_stmt, 'si', $stored_path, $user_id);
+    $updated = mysqli_stmt_execute($update_stmt);
+    mysqli_stmt_close($update_stmt);
+    if (!$updated) {
+        @unlink($filesystem_path);
+        return ['success' => false, 'message' => 'Unable to save the profile picture to your account.'];
+    }
+
+    $old_path = str_replace('\\', '/', (string) ($user_row['profile_picture'] ?? ''));
+    if (preg_match('/^uploads\/profiles\/user_' . $user_id . '_profile_[a-f0-9]+\.(jpg|jpeg|png|webp)$/i', $old_path)) {
+        $old_filesystem_path = __DIR__ . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $old_path);
+        if (is_file($old_filesystem_path)) {
+            @unlink($old_filesystem_path);
         }
     }
-    
-    // Update database
-    $sql = "UPDATE users SET profile_picture = ? WHERE id = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "si", $upload_path, $user_id);
-        if (mysqli_stmt_execute($stmt)) {
-            mysqli_stmt_close($stmt);
-            return ['success' => true, 'message' => 'Profile picture uploaded successfully!', 'path' => $upload_path];
-        } else {
-            mysqli_stmt_close($stmt);
-            // Delete uploaded file if DB update failed
-            if (file_exists($upload_path)) {
-                unlink($upload_path);
-            }
-            return ['success' => false, 'message' => 'Failed to save image information to database'];
-        }
-    }
-    
-    // Delete uploaded file if stmt prepare failed
-    if (file_exists($upload_path)) {
-        unlink($upload_path);
-    }
-    return ['success' => false, 'message' => 'Database error occurred'];
+
+    return ['success' => true, 'message' => 'Profile picture uploaded successfully!', 'path' => $stored_path];
 }
 
 /**

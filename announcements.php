@@ -44,6 +44,16 @@ if ($conn) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/BAZARIO_STYLES.css">
     <style>
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e0e0e0;
+            display: block;
+            flex-shrink: 0;
+        }
+
         body {
             background: #f5f7fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -164,9 +174,10 @@ if ($conn) {
             .content { margin-left: 0; padding: 20px; }
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css?v=4">
 </head>
 <body>
-    <?php echo render_user_navbar($user, $unread_count, 'navbar', 'BAZARIO', false, 'announcements'); ?>
+    <?php echo render_user_navbar($user, $unread_count, 'navbar', 'BAZARIO', false, 'announcements', true); ?>
     <div class="container-main">
         <?php echo render_user_sidebar('announcements'); ?>
         <div class="content">
@@ -187,6 +198,11 @@ if ($conn) {
                         <div class="announcement-badge">
                             <i class="fas fa-bullhorn"></i> Announcement
                         </div>
+                        <?php if (!empty($announcement['image'])): ?>
+                            <div style="margin-bottom: 18px; text-align: center;">
+                                <img src="<?php echo htmlspecialchars($announcement['image']); ?>" alt="<?php echo htmlspecialchars($announcement['title'] ?? 'Announcement'); ?>" style="max-width: 100%; max-height: 320px; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 20px rgba(0,0,0,0.08);">
+                            </div>
+                        <?php endif; ?>
                         <div class="article-title"><?php echo htmlspecialchars($announcement['title'] ?? 'Announcement'); ?></div>
                         <div class="meta">
                             Posted on <?php echo date('F d, Y', strtotime($announcement['created_at'] ?? date('Y-m-d'))); ?>

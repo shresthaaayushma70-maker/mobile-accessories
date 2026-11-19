@@ -1,8 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
-require_once "config.php";
-require_once "includes/notification_service.php";
-require_once "includes/delivery_otp_service.php";
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/notification_service.php';
+require_once __DIR__ . '/../includes/delivery_otp_service.php';
 
 $message = '';
 $isSuccess = false;
@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Delivery Verification</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css?v=4">
 </head>
 <body class="p-4">
 <div class="container" style="max-width:480px;">

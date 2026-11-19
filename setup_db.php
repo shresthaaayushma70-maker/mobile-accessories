@@ -24,6 +24,18 @@ if (mysqli_num_rows($check_role) == 0) {
     $status[] = "✓ 'role' column already exists";
 }
 
+// Ensure profile pictures have a persistent field on users
+$profile_picture_column = mysqli_query($conn, "SHOW COLUMNS FROM users LIKE 'profile_picture'");
+if ($profile_picture_column && mysqli_num_rows($profile_picture_column) === 0) {
+    if (mysqli_query($conn, 'ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) NULL')) {
+        $status[] = "✓ Added profile_picture column to users";
+    } else {
+        $status[] = "✗ Error adding profile_picture column: " . mysqli_error($conn);
+    }
+} else {
+    $status[] = "✓ profile_picture column already exists";
+}
+
 // 2. Check and create admin user
 $admin_check = mysqli_query($conn, "SELECT id FROM users WHERE username = 'admin'");
 if (mysqli_num_rows($admin_check) == 0) {
@@ -83,7 +95,57 @@ if (mysqli_query($conn, $announcement_sql)) {
     $status[] = "✗ Error creating announcements table: " . mysqli_error($conn);
 }
 
-// 5. Verify database structure
+// 5. Ensure order status history table exists
+$status[] = "Checking order status history table...";
+$history_sql = "CREATE TABLE IF NOT EXISTS order_status_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    changed_by INT NULL,
+    note TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_order_id (order_id),
+    INDEX idx_created_at (created_at),
+    CONSTRAINT fk_order_status_history_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+if (mysqli_query($conn, $history_sql)) {
+    $status[] = "✓ Order status history table ready";
+} else {
+    $status[] = "✗ Error creating order status history table: " . mysqli_error($conn);
+}
+
+// 6. Ensure notification preferences table exists
+$status[] = "Checking notification preferences table...";
+$preferences_sql = "CREATE TABLE IF NOT EXISTS notification_preferences (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    email_on_order_placed TINYINT(1) DEFAULT 1,
+    email_on_processing TINYINT(1) DEFAULT 1,
+    email_on_packing TINYINT(1) DEFAULT 1,
+    email_on_out_for_delivery TINYINT(1) DEFAULT 1,
+    email_on_delivered TINYINT(1) DEFAULT 1,
+    sms_on_order_placed TINYINT(1) DEFAULT 0,
+    sms_on_processing TINYINT(1) DEFAULT 1,
+    sms_on_packing TINYINT(1) DEFAULT 0,
+    sms_on_out_for_delivery TINYINT(1) DEFAULT 1,
+    sms_on_delivered TINYINT(1) DEFAULT 1,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+if (mysqli_query($conn, $preferences_sql)) {
+    $status[] = "✓ Notification preferences table ready";
+    $seed_preferences = "INSERT IGNORE INTO notification_preferences (user_id) SELECT id FROM users";
+    if (mysqli_query($conn, $seed_preferences)) {
+        $status[] = "✓ Default notification preferences ready";
+    } else {
+        $status[] = "✗ Error creating default notification preferences: " . mysqli_error($conn);
+    }
+} else {
+    $status[] = "✗ Error creating notification preferences table: " . mysqli_error($conn);
+}
+
+// 7. Verify database structure
 $status[] = "\n=== Database Verification ===";
 $users_result = mysqli_query($conn, "SELECT COUNT(*) as count FROM users");
 $users_row = mysqli_fetch_assoc($users_result);
@@ -203,6 +265,7 @@ $success = true;
             color: #667eea;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css?v=4">
 </head>
 <body>
     <div class="setup-container">

@@ -561,6 +561,7 @@ $orders_result = mysqli_stmt_get_result($stmt);
             border: 1px solid #f5c6cb;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css?v=4">
 </head>
 <body>
     <?php if ($is_admin): ?>
@@ -587,7 +588,7 @@ $orders_result = mysqli_stmt_get_result($stmt);
                     <a href="profile.php">
                         <i class="fas fa-user-circle"></i> Profile
                     </a>
-                    <form action="logout.php" method="POST" style="margin: 0; display: inline;">
+                    <form action="auth/logout.php" method="POST" style="margin: 0; display: inline;">
                         <button type="submit" class="logout-btn">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </button>
@@ -627,7 +628,7 @@ $orders_result = mysqli_stmt_get_result($stmt);
                 <a href="profile.php">
                     <i class="fas fa-user-circle"></i> Profile
                 </a>
-                <form action="logout.php" method="POST" style="margin: 0; padding: 0;">
+                <form action="auth/logout.php" method="POST" style="margin: 0; padding: 0;">
                     <button type="submit" class="sidebar-logout-btn">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>

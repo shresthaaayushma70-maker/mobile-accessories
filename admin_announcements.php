@@ -76,6 +76,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['image'];
             $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            $upload_dir = __DIR__ . '/uploads/announcements';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0775, true);
+            }
+
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime = finfo_file($finfo, $file['tmp_name']);
             finfo_close($finfo);
@@ -87,12 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
                 $safe_name = uniqid('ann_', true) . '.' . strtolower($ext);
-                $target = 'uploads/announcements/' . $safe_name;
+                $target = $upload_dir . '/' . $safe_name;
                 if (move_uploaded_file($file['tmp_name'], $target)) {
-                    if ($remove_image !== true && $existing_image && file_exists($existing_image) && $existing_image !== $target) {
+                    $relative_target = 'uploads/announcements/' . $safe_name;
+                    if ($remove_image !== true && $existing_image && file_exists($existing_image) && $existing_image !== $relative_target) {
                         @unlink($existing_image);
                     }
-                    $image_path = $target;
+                    $image_path = $relative_target;
                 } else {
                     $error_msg = 'Image upload failed.';
                 }
@@ -118,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare('INSERT INTO announcements (title, message, image, announcement_type, priority, status, is_active, created_by, start_at, expires_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
                 if ($stmt) {
                     $active = ($status === 'published') ? 1 : 0;
-                    $stmt->bind_param('ssssssiiiss', $title, $message, $image_path, $type, $priority, $status, $active, $admin_id, $start_at, $expires_at);
+                    $stmt->bind_param('ssssssiiss', $title, $message, $image_path, $type, $priority, $status, $active, $admin_id, $start_at, $expires_at);
                     $stmt->execute();
                     $stmt->close();
                     $success_msg = 'Announcement created successfully.';
@@ -182,15 +188,10 @@ if ($res) {
         .table td, .table th { vertical-align: middle; }
         @media (max-width: 768px) { .container-main { display: block; } .sidebar { position: static; width: 100%; height: auto; } .content { margin-left: 0; padding: 20px; } }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css?v=4">
 </head>
 <body>
-    <div class="navbar">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <i class="fas fa-shopping-bag" style="font-size: 28px;"></i>
-            <span class="navbar-brand" style="margin: 0;">BAZARIO</span>
-            <span style="opacity: 0.9; font-size: 12px; margin-left: auto;">Admin Console</span>
-        </div>
-    </div>
+    <?php $adminBasePath = ''; require __DIR__ . '/components/admin_heading_bar.php'; ?>
 
     <div class="container-main">
         <div class="sidebar">
@@ -201,7 +202,7 @@ if ($res) {
             <a href="admin_profile.php"><i class="fas fa-user-circle"></i> Admin Profile</a>
             <div class="user-info" style="margin-top: auto; padding: 15px 20px; color: rgba(255,255,255,0.8); border-top: 1px solid rgba(255,255,255,0.2);">
                 <p><strong><?php echo htmlspecialchars($_SESSION['username'] ?? 'Admin'); ?></strong></p>
-                <form action="logout.php" method="POST">
+                <form action="auth/logout.php" method="POST">
                     <button type="submit" class="logout-btn" style="background: #e74c3c; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px;"> <i class="fas fa-sign-out-alt"></i> Logout </button>
                 </form>
             </div>
